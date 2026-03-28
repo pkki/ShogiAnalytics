@@ -1,0 +1,112 @@
+name: Build ShogiAgent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'local-agent/**'
+      - '.github/workflows/build-agent.yml'
+  workflow_dispatch:   # 手動実行ボタン
+
+jobs:
+  # ── Windows ビルド ─────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: local-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: local-agent
+
+      - name: Build Windows portable EXE
+        run: npm run build:app
+        working-directory: local-agent
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: local-agent/dist/ShogiAgent-portable.exe
+
+  # ── Mac ビルド ─────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: local-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: local-agent
+
+      - name: Build Mac ZIP (arm64 + x64)
+        run: npm run build:app:mac
+        working-directory: local-agent
+
+      - name: Upload Mac arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64-build
+          path: local-agent/dist/ShogiAgent-mac-arm64.zip
+
+      - name: Upload Mac x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64-build
+          path: local-agent/dist/ShogiAgent-mac-x64.zip
+
+  # ── GitHub Release に公開 ──────────────────────────────────
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List built files
+        run: find artifacts -type f
+
+      # agent-latest タグを最新コミットに強制更新
+      - name: Force-update agent-latest tag
+        run: |
+          git tag -f agent-latest
+          git push origin agent-latest --force
+
+      # リリースを再作成（常に最新ファイルで上書き）
+      - name: Delete existing release (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete agent-latest --yes --repo ${{ github.repository }} 2>/dev/null || true
+
+      - name: Create release with binaries
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create agent-latest \
+            --repo ${{ github.repository }} \
+            --title "ShogiAgent Latest" \
+            --notes "自動ビルド — コミット: ${{ github.sha }}" \
+            artifacts/ShogiAgent-portable.exe \
+            artifacts/ShogiAgent-mac-arm64.zip \
+            artifacts/ShogiAgent-mac-x64.zip

@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── 秘密情報・環境変数 ────────────────────────────────────────
+.env
+.env.local
+server/.env
+signaling-server/.env
+local-agent/.env
+local-agent/config.json
+
+# ── DB・ゲームファイル ────────────────────────────────────────
+*.db
+*.kif
+*.kif2
+*.csa
+
+# ── バイナリ ─────────────────────────────────────────────────
+*.exe
+*.zip
+*.dmg
+*.AppImage
+local-agent/dist/
+
+# ── バックアップ ──────────────────────────────────────────────
+*.bak
+*.backup

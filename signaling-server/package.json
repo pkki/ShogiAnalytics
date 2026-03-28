@@ -1,0 +1,19 @@
+{
+  "name": "shogi-signaling-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebRTC signaling + auth server for ShogiAnalytics",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.6.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.14",
+    "socket.io": "^4.8.3"
+  }
+}
