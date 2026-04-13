@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-0.0.0-green.svg)
 ![React](https://img.shields.io/badge/React-19.2.4-61DAFB?logo=react&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?logo=vite&logoColor=white)
 
 </div>
 
@@ -15,7 +15,9 @@
 
 ## 🎯 プロジェクト概要
 
-**ShogiAnalytics** は、YaneuraOu USI エンジンを搭載した、最新の将棋対局分析プラットフォームです。web ブラウザ及びモバイルデバイスから将棋の局面を深く分析し、棋力向上をサポートします。
+**ShogiAnalytics** は、YaneuraOu USI エンジンと連携する、最新の将棋対局分析プラットフォームです。web ブラウザ及びモバイルデバイスから直感的に将棋の局面を分析し、棋力向上をサポートします。
+
+このリポジトリは **フロントエンド部分** を管理しています。バックエンド（エンジン連携・分析API）は別リポジトリで開発・管理されています。
 
 ### ✨ 主な機能
 
@@ -31,21 +33,15 @@
 
 ## 🛠️ 技術スタック
 
-### フロントエンド
-- **React 19** + **Vite** - 高速で最新の UI フレームワーク
+- **React 19** - 最新の UI フレームワーク
+- **Vite** - 次世代の高速ビルドツール
 - **TailwindCSS** v3 - ユーティリティ first のスタイリング
 - **Socket.io Client** - リアルタイム通信
 - **React Router** v7 - ページナビゲーション
 - **Recharts** - 対局分析グラフの可視化
 - **Lucide React** - モダンなアイコン
-
-### バックエンド
-- **Node.js** + **Express** - 軽量で高速なサーバー
-- **Socket.io** - リアルタイム双方向通信
-- **YaneuraOu USI** - 将棋エンジン統合
-
-### モバイル
-- **Capacitor** v7 - web アプリをネイティブアプリ化
+- **Capacitor** v7 - web アプリをモバイルネイティブ化
+- **i18next** - 多言語対応 (日本語・英語)
 
 ---
 
@@ -54,7 +50,6 @@
 ### 必要な環境
 - **Node.js** 18+
 - **npm** または **yarn**
-- **YaneuraOu エンジン** (Windows 対応版)
 
 ### インストール
 
@@ -70,44 +65,41 @@ npm install
 ### 開発サーバーの起動
 
 ```bash
-# フロントエンド開発サーバー (http://localhost:5173)
+# 開発サーバーを起動 (http://localhost:5173)
 npm run dev
-
-# 別のターミナルでバックエンドサーバーを起動
-cd server
-npm install
-npm start
-# バックエンドは http://localhost:3001 で起動します
 ```
+
+> 📌 **注:** このリポジトリはフロントエンドのみです。バックエンド（エンジン連携・分析API）は別リポジトリで管理されています。
 
 ### 本番ビルド
 
 ```bash
-# フロントエンドのビルド
+# フロントエンドをビルド
 npm run build
 
-# バックエンドサーバーは自動的に dist/ を静的ファイルとして配信
-cd server
-npm start
+# ビルド結果は dist/ ディレクトリに出力されます
 ```
 
 ---
 
-## 🚀 デプロイ
+## 🚀 デプロイ・ビルド
 
-### リモートアクセス (Cloudflare Tunnel)
-
-モバイルデバイスからのリモートアクセスをサポート：
+ビルドされた `dist/` ディレクトリは、任意の静的ファイルサーバーでホストできます：
 
 ```bash
-# Cloudflared のインストール
-# https://developers.cloudflare.com/cloudflare-one/connections/connect-applications/install-and-setup/installation/
+# ビルド
+npm run build
 
-# トンネルの起動
-cloudflared tunnel --url http://localhost:3001
+# ビルド結果をプレビュー
+npm run preview
 ```
 
-トンネル URL が生成されたら、モバイルブラウザからアクセス可能です。
+**Android アプリ化:**
+
+```bash
+# Capacitor で Android アプリをビルド
+npm run android:apk
+```
 
 ---
 
@@ -123,29 +115,29 @@ ShogiAnalytics/
 │   │   └── NavigationPanel.jsx     # ナビゲーション
 │   └── state/
 │       └── gameState.js            # 棋譜・盤面ロジック
-├── server/
-│   └── index.js                    # Express + Socket.io + USI エンジン
+├── public/                         # 静的アセット
 ├── vite.config.js
 ├── tailwind.config.js
-└── package.json
+├── package.json
+└── android/                        # Capacitor Android プロジェクト
 ```
 
 ---
 
 ## 🔧 設定
 
-### YaneuraOu エンジンパス
+### 環境変数
 
-`server/index.js` で YaneuraOu のパスを指定してください：
+`.env` ファイルを作成して、バックエンドサーバーの URL を指定できます：
 
-```javascript
-const enginePath = "D:\\将棋エンジン\\YaneuraOu.exe";
+```
+VITE_API_URL=http://localhost:3001
 ```
 
 ### ポート設定
 
-- フロントエンド: `5173` (dev) / `3001` (prod)
-- バックエンド: `3001`
+- 開発サーバー: `http://localhost:5173`
+- バックエンド API: `http://localhost:3001` (デフォルト)
 
 ---
 
@@ -175,8 +167,11 @@ npm run android:apk     # Android APK をビルド
 
 ## 🔐 セキュリティ
 
-- Socket.io は同一オリジンと localhost のみ許可
-- 本番環境では CORS を適切に設定してください
+本番環境にデプロイする際は、バックエンド（別リポジトリ）で以下の設定を確認してください：
+
+- CORS（Cross-Origin Resource Sharing）の適切な設定
+- Socket.io の認証・認可メカニズム
+- API エンドポイントの入力検証
 
 ---
 
