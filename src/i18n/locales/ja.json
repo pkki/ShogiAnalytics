@@ -1,0 +1,752 @@
+{
+  "appName": "将棋アナリティクス",
+  "appTagline": "AIを使った将棋棋譜解析・共有サービス",
+  "appDescription": "将棋アナリティクスは、AIエンジンを使って将棋の棋譜を解析・検討できる無料サービスです。棋譜の読み込み・保存・共有、リアルタイム対局、形勢グラフなどの機能を提供します。",
+
+  "nav": {
+    "features": "機能",
+    "howto": "使い方",
+    "faq": "FAQ",
+    "contact": "お問い合わせ",
+    "openApp": "アプリを開く",
+    "login": "ログイン",
+    "startFree": "無料で始める",
+    "menu": "メニュー",
+    "profile": "プロフィール",
+    "mainApp": "メインアプリ",
+    "tsume": "詰将棋",
+    "tsumeList": "最新の詰将棋一覧",
+    "openMenu": "メニューを開く",
+    "closeMenu": "メニューを閉じる",
+    "home": "ホーム"
+  },
+
+  "header": {
+    "playing": "対局中",
+    "ended": "対局終了",
+    "game": "対局",
+    "engineSettings": "エンジン設定"
+  },
+
+  "home": {
+    "badge": "自宅PCの将棋AIを、スマホからでも使えるようにするツール",
+    "typingWords": ["外出先で", "スマホでも", "どこでも"],
+    "heroHeadline": "自宅の将棋AIで解析",
+    "whatYouCanDo": "このサービスでできること",
+    "whatYouCanDoDesc": "自宅PCにインストールした将棋AIエンジン（やねうら王・水匠など）を、外出先のスマホやタブレットから使えるようにします。",
+    "whatYouCanDoNote": "エンジン自体はあなたのPCで動作します。このサービスはその「橋渡し」です。",
+    "heroDesc": "棋譜をKIF/CSAで読み込んで解析。候補手・形勢グラフ・読み筋をリアルタイムで確認。解析結果はクラウドに保存してどこからでも見返せます。",
+    "startFree": "無料で始める",
+    "openApp": "アプリを開く",
+    "engineConnected": "自宅PCエンジン接続中",
+    "sente": "先手有利",
+
+    "stats": {
+      "loadingUsers": "読み込み中…",
+      "userSuffix": "名",
+      "users": "登録ユーザー数",
+      "price": "利用料金（全機能）",
+      "format": "対応棋譜フォーマット",
+      "operation": "運営体制",
+      "operationVal": "個人開発",
+      "note": "※ 個人が趣味で開発・運営しています。障害対応などに時間がかかる場合があります。"
+    },
+
+    "howItWorks": {
+      "badge": "仕組み",
+      "title": "どうやって動いているの？",
+      "step1Title": "① 自宅PCのエンジン",
+      "step1Desc": "やねうら王などのUSIエンジンが自宅PCで動きます。解析の重い処理はすべてあなたのPC上で行われます。",
+      "step2Title": "② local-agent が橋渡し",
+      "step2Desc": "自宅PCで「local-agent」を起動すると、このWebサービスとWebRTC P2Pで接続されます。エンジン通信はサーバーを通過しません。",
+      "step3Title": "③ スマホで解析結果を確認",
+      "step3Desc": "スマホやタブレットのブラウザから棋譜を入力すると、自宅PCのエンジンが解析して結果を返します。",
+      "warningTitle": "外出中に解析するには自宅PCの起動が必要です",
+      "warningDesc": "エンジンは自宅PCで動くため、外出先から解析するには自宅PCが起動していてlocal-agentが動いている必要があります。PCを起動したまま外出、またはリモート起動できる環境が前提です。アカウントなしのゲストモードでも棋譜の読み込みや閲覧は可能ですが、エンジン解析はlocal-agent接続が必要です。"
+    },
+
+    "features": {
+      "badge": "Features",
+      "title": "主な機能",
+      "engine": { "title": "USIエンジン リアルタイム解析", "desc": "local-agentで接続した自宅PCのUSIエンジンがリアルタイムで候補手・評価値・読み筋を表示。MultiPVで複数候補を同時表示します。" },
+      "graph": { "title": "形勢グラフ", "desc": "全手数の評価値推移をグラフ化。悪手・疑問手・好手を色分けし、クリックで即その局面へジャンプできます。" },
+      "batch": { "title": "棋譜一括解析", "desc": "KIF/CSAファイルを読み込んで「解析」ボタンを押すだけ。AIが全手を自動解析し、各局面の最善手・評価値を一括記録します。" },
+      "cloud": { "title": "クラウド棋譜保存", "desc": "解析結果付きの棋譜をサーバーに保存。どのデバイスからでも続きを閲覧・再解析できます。評価値なし軽量保存も選べます。" },
+      "multi": { "title": "マルチデバイス対応", "desc": "PC・タブレット・スマートフォン全てに最適化されたUI。自宅PCとスマホで役割を分担して使えます。" },
+      "tree": { "title": "変化手順ツリー", "desc": "「あの手を指していたら？」を気軽に検討できる変化ツリー。変化手も含めてKIFエクスポート可能です。" },
+      "tsume": { "title": "詰将棋共有", "desc": "任意の局面から詰将棋を作成して共有できます。内蔵ソルバーが自動で解を検証し、公開した詰将棋はみんなが挑戦できる一覧に掲載されます。" }
+    },
+
+    "tsume": {
+      "badge": "詰将棋",
+      "title": "詰将棋を作って共有しよう",
+      "desc": "任意の局面を詰将棋パズルとして共有できます。ソルバーが自動で解を確認するので、手作業でのチェックは不要です。",
+      "step1": "局面を用意する",
+      "step1desc": "棋譜を読み込むか、局面編集モードで自由に駒を配置してください。",
+      "step2": "詰将棋として共有",
+      "step2desc": "サイドバーの「詰将棋として共有」をクリック。タイトル・説明・公開設定を入力して投稿します。",
+      "step3": "みんなで挑戦",
+      "step3desc": "リンクを受け取った人が実際に駒を動かして解けます。公開設定にすると詰将棋一覧に掲載されます。",
+      "cta": "詰将棋一覧を見る",
+      "noteTitle": "解の自動検証つき",
+      "noteDesc": "投稿前に内蔵ソルバーが解を確認します。詰みのある局面だけが共有できます。"
+    },
+
+    "tech": {
+      "engine": "エンジン接続規格",
+      "webrtc": "ブラウザ直結通信",
+      "security": "セキュリティ規格",
+      "p2p": "エンジン通信はサーバー非経由"
+    },
+
+    "howto": {
+      "badge": "How to use",
+      "title": "使い方",
+      "subtitle": "セットアップはかんたん。最短数分で使えます。",
+      "step1Title": "アカウント作成（無料）",
+      "step1Desc": "メールアドレスとパスワードで無料登録。メール認証後すぐに利用開始できます。",
+      "step1Detail": "登録・利用料は一切不要。クレジットカード入力も必要ありません。",
+      "step2Title": "local-agent をPCで起動",
+      "step2Desc": "PCにインストール済みのUSIエンジンをlocal-agentで接続します。QRコードをスキャンするだけでペアリング完了。",
+      "step2Detail": "対応エンジン例：やねうら王、水匠、dlshogi など USI 対応エンジン全般。WebRTC P2Pのためエンジンのはサーバーを通過しません。",
+      "step3Title": "棋譜を読み込んで解析スタート",
+      "step3Desc": "KIF/CSAファイルを開くか、テキストを貼り付けるだけ。「解析」ボタンで全手を自動解析します。",
+      "step3Detail": "解析後は形勢グラフ・候補手・読み筋が全手分記録。KIFエクスポートやクラウド保存もできます。",
+      "security": { "title": "セキュリティについて", "body": "全通信はHTTPS/TLSで暗号化。JWTトークン認証により棋譜データは保護されます。エンジンとのやり取りはWebRTC P2PのためサーバーがAIの思考内容を見ることはありません。" },
+      "guest": { "title": "ゲストモードで今すぐ試せます", "body": "アカウント登録なしでもゲストとしてアプリを操作できます。KIF読み込みや盤面確認は今すぐ試せます。ただしエンジン解析・クラウド保存にはログインが必要です。" },
+      "pc": { "title": "自宅PCが必要です", "body": "解析には自宅PCのUSIエンジンが必要です。スマホ単体ではエンジン解析はできません。自宅PCが起動してlocal-agentが動いている状態で、外出先から解析できます。" }
+    },
+
+    "faq": {
+      "badge": "FAQ",
+      "title": "よくある質問",
+      "q1": "どんなUSIエンジンが使えますか？",
+      "a1": "USI対応エンジンであればどれでも使用可能です。やねうら王・水匠・dlshogi・Gikou・AperyなどPCで動作するUSIエンジンをそのまま接続できます。",
+      "q2": "スマホ単体でエンジン解析はできますか？",
+      "a2": "できません。エンジンは自宅PCで動作するため、外出先から解析するには自宅PCが起動していてlocal-agentが動いている必要があります。",
+      "q3": "自宅PCを起動したまま外出しないといけないですか？",
+      "a3": "外出先からエンジン解析をする場合はその通りです。PCをスリープさせず、local-agentを起動したままにする必要があります。WoL（Wake on LAN）などでリモート起動する方法もあります。",
+      "q4": "対応している棋譜フォーマットは？",
+      "a4": "KIF形式（.kif / .kifu）とCSA形式（.csa）に対応しています。Shift-JISのKIFファイルも自動判別して読み込めます。",
+      "q5": "料金はかかりますか？",
+      "a5": "現在は全機能を無料でご利用いただけます。個人開発のため将来的に変更になる可能性はありますが、有料化する場合は事前にお知らせします。",
+      "q6": "クラウドに保存した棋譜は安全ですか？",
+      "a6": "JWT認証により、あなたの棋譜は自分のアカウントからしかアクセスできません。ただし個人運営のサービスのため、重要な棋譜はローカルにもバックアップを取ることを推奨します。"
+    },
+
+    "contact": {
+      "badge": "Contact",
+      "title": "お問い合わせ",
+      "desc": "バグ報告・機能要望・ご質問はこちらからどうぞ。\n個人運営のため返信に時間がかかる場合があります。",
+      "loginRequired": "お問い合わせにはログインが必要です。",
+      "loginBtn": "ログイン / 無料登録",
+      "sent": "送信しました",
+      "sentDesc": "お問い合わせを受け付けました。確認次第ご返信します。",
+      "sendAnother": "別のお問い合わせをする",
+      "subject": "件名",
+      "subjectPlaceholder": "バグ報告・機能要望・その他",
+      "body": "本文",
+      "bodyPlaceholder": "お問い合わせ内容をできるだけ詳しく書いてください。",
+      "submit": "送信する",
+      "submitting": "送信中…",
+      "error": "エラーが発生しました",
+      "networkError": "通信エラーが発生しました"
+    },
+
+    "cta": {
+      "headline1": "自宅の将棋AIを、",
+      "headline2": "どこでも。",
+      "free": "登録無料・クレジットカード不要。",
+      "features": ["全機能無料", "KIF / CSA 対応", "PC・スマホ対応", "USIエンジン対応"],
+      "startFree": "無料で始める"
+    },
+
+    "footer": {
+      "desc": "自宅PCのUSIエンジンをどこからでも使えるようにする、個人開発の棋譜解析Webアプリ。",
+      "product": "プロダクト",
+      "features": "機能一覧",
+      "howto": "使い方",
+      "openApp": "アプリを開く",
+      "support": "サポート",
+      "contact": "お問い合わせ",
+      "tech": "技術情報",
+      "copyright": "個人開発・運営",
+      "terms": "利用規約",
+      "privacy": "プライバシーポリシー"
+    }
+  },
+
+  "login": {
+    "title": "ログイン / 新規登録 | 将棋アナリティクス",
+    "description": "将棋アナリティクスにログインまたは新規登録して、AIによる棋譜解析・保存・共有機能をご利用ください。",
+    "loginPrompt": "ログインしてください",
+    "signupPrompt": "新規アカウントを作成",
+    "verifyPrompt": "メール認証コードを入力",
+    "or": "または",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "passwordHint": "パスワード (8文字以上)",
+    "passwordPlaceholder": "8文字以上",
+    "login": "ログイン",
+    "signup": "認証コードを送信",
+    "verify": "認証して続ける",
+    "createAccount": "アカウントを作成 →",
+    "backToLogin": "← ログインに戻る",
+    "backBtn": "← 戻る",
+    "resend": "コードを再送",
+    "agreeTerms": "に同意します",
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "and": "および",
+    "verifyCode": "認証コード (6桁)",
+    "verifyCodeSent": "に6桁の認証コードを送信しました",
+    "processing": "処理中…",
+    "serverError": "サーバーエラーが発生しました"
+  },
+
+  "tsume": {
+    "title": "詰将棋",
+    "categories": {
+      "1-5": "1〜5手詰め",
+      "7-11": "7〜11手詰め",
+      "13+": "13手〜詰め",
+      "all": "詰将棋 一覧"
+    },
+    "moves": "手",
+    "moveMate": "手詰め",
+    "unlisted": "限定",
+    "by": "作",
+    "likes": "いいね",
+    "bookmarks": "ブックマーク",
+    "solved": "解答済み",
+    "correct": "正解！",
+    "incorrect": "不正解",
+    "giveUp": "解答を見る",
+    "hint": "ヒント",
+    "reset": "最初から",
+    "next": "次の問題",
+    "prev": "前の問題",
+    "loading": "読み込み中…",
+    "notFound": "詰将棋が見つかりません",
+    "backToList": "← 一覧に戻る",
+    "solveChallenges": "詰将棋に挑戦",
+    "recentTitle": "最近の詰将棋",
+    "noItems": "まだ詰将棋がありません",
+    "categoryTitle": "詰将棋カテゴリ",
+    "seeAll": "すべての詰将棋",
+    "list": "詰将棋一覧",
+    "sortRecent": "新着順",
+    "sortLikes": "いいね順",
+    "none": "なし",
+    "autoSolve": "自動解答",
+    "autoSolveStop": "停止",
+    "solving": "解答中…",
+    "noSolution": "解なし",
+    "solution": "解答",
+    "attackerTurn": "攻め方の手番",
+    "defenderTurn": "受け方の手番",
+    "share": "共有",
+    "edit": "編集",
+    "delete": "削除",
+    "visibility": {
+      "public": "公開",
+      "unlisted": "限定公開",
+      "private": "非公開"
+    }
+  },
+
+  "profile": {
+    "title": "のプロフィール | 将棋アナリティクス",
+    "editProfile": "プロフィールを編集",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "posts": "投稿",
+    "bookmarks": "ブックマーク",
+    "tsumeCount": "個の詰将棋",
+    "noTsume": "まだ詰将棋がありません",
+    "noBookmarks": "ブックマークがありません",
+    "loadError": "プロフィールの読み込みに失敗しました",
+    "saveError": "保存に失敗しました",
+    "backToTop": "← トップに戻る",
+    "anonymous": "名無し",
+    "displayName": "表示名",
+    "bio": "自己紹介",
+    "avatarColor": "アバターカラー"
+  },
+
+  "share": {
+    "loading": "読み込み中…",
+    "loadingKifu": "棋譜を読み込み中…",
+    "moveList": "指し手一覧",
+    "download": "KIFダウンロード",
+    "evaluation": "評価値",
+    "candidates": "候補手",
+    "notFound": "棋譜が見つかりません",
+    "failedToAnalyze": "棋譜を解析できませんでした",
+    "loadFailed": "棋譜を読み込めませんでした",
+    "backToHome": "← トップページに戻る",
+    "sharedKifu": "共有棋譜",
+    "back": "← 戻る",
+    "save": "保存",
+    "saveKifFile": "KIFファイルを保存",
+    "readOnly": "閲覧専用",
+    "vs": "vs"
+  },
+
+  "app": {
+    "newGame": "新規局面",
+    "openFile": "棋譜を開く",
+    "saveFile": "棋譜を保存",
+    "paste": "テキストを貼り付け",
+    "flip": "盤面を反転",
+    "branch": "変化手順",
+    "analysis": "解析",
+    "graph": "形勢グラフ",
+    "cloud": "クラウド保存",
+    "delete": "削除",
+    "share": "共有",
+    "edit": "編集",
+    "close": "閉じる",
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "ok": "OK",
+    "loading": "読み込み中…",
+    "error": "エラーが発生しました",
+    "saved": "保存しました",
+    "copied": "コピーしました",
+    "promoting": "成りますか？",
+    "promote": "成る",
+    "noPromote": "成らない",
+    "sente": "先手",
+    "gote": "後手",
+    "winner": "勝者",
+    "loser": "敗者",
+    "draw": "引き分け",
+    "resign": "投了",
+    "checkmate": "詰み",
+    "timeUp": "時間切れ",
+    "moveNumber": "手目",
+    "evaluation": "評価値",
+    "depth": "深さ",
+    "nodes": "ノード数",
+    "speed": "速度",
+    "candidates": "候補手",
+    "principalVariation": "読み筋",
+    "analysisRunning": "解析中…",
+    "analysisStop": "解析停止",
+    "analysisStart": "解析開始",
+    "engineNotConnected": "エンジン未接続",
+    "connectEngine": "エンジンを接続してください",
+    "guestMode": "ゲストモード",
+    "loginRequired": "この機能はログインが必要です",
+    "cloudSaveSuccess": "クラウドに保存しました",
+    "cloudSaveError": "保存に失敗しました",
+    "deleteConfirm": "削除してよいですか？",
+    "noKifu": "棋譜がありません",
+    "editMode": "編集モード",
+    "viewMode": "閲覧モード",
+    "initial": "初期局面",
+    "formations": "囲い・戦法",
+    "autoAnalysis": "自動解析",
+    "multiPV": "マルチPV",
+    "pvBoard": "読み筋盤面",
+    "moveTree": "変化ツリー",
+    "moveList": "指し手一覧",
+    "evalMeter": "形勢メーター",
+    "showHide": "表示/非表示",
+    "good": "好手",
+    "okay": "普通",
+    "bad": "悪手",
+    "blunder": "大悪手",
+    "book": "定跡"
+  },
+
+  "result": {
+    "resign": "投了",
+    "checkmate": "詰み",
+    "threefoldRepetition": "千日手",
+    "heldPosition": "持将棋",
+    "interrupted": "中断",
+    "noCheckmate": "不詰",
+    "timeLoss": "切れ負け",
+    "illegalMoveOpponent": "反則勝ち",
+    "illegalMoveOwn": "反則負け",
+    "kingCaptureVictory": "入玉勝ち",
+    "noShowOpponent": "不戦勝",
+    "noShowOwn": "不戦敗"
+  },
+
+  "player": {
+    "sente": "先手",
+    "gote": "後手",
+    "you": "あなた",
+    "cpu": "CPU"
+  },
+
+  "gameInfo": {
+    "startTime": "開始日時",
+    "endTime": "終了日時",
+    "tournament": "棋戦",
+    "opening": "戦型",
+    "title": "表題",
+    "timeControl": "持ち時間",
+    "byoyomi": "秒読み",
+    "timeUsed": "消費時間",
+    "venue": "場所",
+    "source": "掲載",
+    "notes": "備考"
+  },
+
+  "dialog": {
+    "gameRecordInfo": "棋譜情報",
+    "tsumePuzzleSettings": "詰将棋の設定",
+    "tsumeAnalyzing": "詰将棋を解析中…"
+  },
+
+  "error": {
+    "kifParsingFailed": "棋譜を解析できませんでした。KIF / KIFU / CSA 形式のファイルを確認してください。",
+    "kifPartialLoadFailure": "{moveNumber}手目以降の棋譜を正しく読み込めませんでした（未対応の表記または不正な棋譜の可能性があります）。{prevMoveNumber}手目までの局面は正常に読み込まれています。",
+    "clipboardEmpty": "クリップボードが空です。",
+    "clipboardAccessDenied": "クリップボードへのアクセスが拒否されました。ブラウザの権限設定を確認してください。",
+    "tsumeSharingFailed": "詰将棋共有エラー: {message}",
+    "tsumeNoSolution": "解が見つかりませんでした",
+    "tsumeNoSolution30": "解が見つかりませんでした（詰まない局面か30手超えです）",
+    "tsumeNoSolutionMaxDepth": "解が見つかりませんでした（{moves}手を超えるか詰まない局面です）",
+    "solutionConversionFailed": "解析結果の変換に失敗しました",
+    "sharingFailed": "共有エラー: {message}",
+    "analysisFailed": "解析エラー: {message}",
+    "cloudSaveFailed": "クラウド保存エラー: {message}",
+    "cloudLoadFailed": "読み込みエラー: {message}",
+    "cloudDeleteFailed": "削除エラー: {message}",
+    "networkNotSupported": "お使いのネットワークはご利用いただけません",
+    "webrtcConnectionFailed": "このネットワーク環境ではエンジンとの接続（WebRTC）を確立できませんでした。"
+  },
+
+  "button": {
+    "cancel": "キャンセル",
+    "save": "保存",
+    "copy": "コピー",
+    "copied": "コピー済み ✓",
+    "copyLink": "リンクコピー",
+    "resign": "投了",
+    "suspend": "中断",
+    "close": "閉じる",
+    "hideDetails": "詳細を隠す",
+    "details": "詳細",
+    "engineForceRestart": "エンジン強制再起動",
+    "restart": "再起動"
+  },
+
+  "menu": {
+    "new": "新規",
+    "open": "開く",
+    "save": "保存",
+    "cloud": "クラウド",
+    "analysis": "検討",
+    "tree": "ツリー",
+    "flip": "反転",
+    "evalBar": "形勢バー",
+    "evalGraph": "グラフ",
+    "candidateMoves": "候補手",
+    "gameRecordInfo": "棋譜情報",
+    "positionEdit": "局面編集",
+    "settings": "設定",
+    "openFile": "ファイルを開く",
+    "paste": "貼り付け",
+    "shogiWarsRecord": "将棋ウォーズ棋譜",
+    "saveWithEval": "評価値を含めて保存",
+    "saveWithoutEval": "評価値なしで保存",
+    "createShareLink": "共有リンクを作成",
+    "shareAsTsume": "詰将棋として共有"
+  },
+
+  "share": {
+    "created": "共有リンクを作成しました",
+    "publicNote": "ログイン不要で誰でも閲覧できます",
+    "openInNewTab": "新しいタブで開く →",
+    "unlistedNote": "限定公開 — URLを知っている人だけがアクセスできます",
+    "publicListNote": "公開 — 詰将棋一覧に表示されます"
+  },
+
+  "modal": {
+    "tsumeAnalyzing": "詰将棋を解析中…"
+  },
+
+  "progress": {
+    "searchingMate": "詰{moves}手を探索中",
+    "searchingMateJsSolver": "{moves}手詰みを探索中",
+    "analyzing": "エンジンで解析中",
+    "mate": "詰{moves}手",
+    "currentMoves": "現在 {moves}手",
+    "maxMoves": "最大 {moves}手まで解析可能",
+    "engineSearching": "エンジン探索中"
+  },
+
+  "help": {
+    "deeperMatesLonger": "深い詰みほど時間がかかります。キャンセルしていつでも中断できます。"
+  },
+
+  "form": {
+    "title": "タイトル",
+    "titlePlaceholder": "例: 3手詰め問題、玉の逃げ道を塞ぐ詰み...",
+    "descriptionPlaceholder": "詰将棋の解説や作成意図など..."
+  },
+
+  "confirm": {
+    "deleteFromCloud": "この棋譜をクラウドから削除しますか？",
+    "deleteShareLink": "「{title}」の共有リンクを削除しますか？"
+  },
+
+  "section": {
+    "troubleshooting": "考えられる原因と対処法"
+  },
+
+  "troubleshoot": {
+    "firewall": "ファイアウォール・プロキシ",
+    "firewallExplanation": "会社・学校のネットワークが WebRTC の UDP 通信をブロックしている可能性があります。ネットワーク管理者に UDP ポート（3478, 19302）の開放を依頼してください。",
+    "switchToMobile": "モバイルデータ通信に切り替える",
+    "mobileExplanation": "Wi-Fi を切ってスマートフォンのモバイル回線で接続すると解決することがあります。",
+    "tryVPN": "VPN を試す",
+    "vpnExplanation": "VPN を使用すると NAT 越え制限を回避できる場合があります。",
+    "differentNetwork": "別のネットワーク環境を試す",
+    "differentNetworkExplanation": "自宅の Wi-Fi やテザリングなど、制限の少ない環境で再度お試しください。"
+  },
+
+  "status": {
+    "yourTurn": "あなたの手番",
+    "gameEnded": "対局終了",
+    "engineStarting": "起動中",
+    "analyzeNotDuringGame": "対局中は棋譜解析を使用できません。"
+  },
+
+  "panel": {
+    "gameAnalysis": "棋譜解析",
+    "cloudRecords": "クラウド棋譜"
+  },
+
+  "info": {
+    "analyzeNotDuringGame": "対局中は棋譜解析を使用できません。"
+  },
+
+  "default": {
+    "untitled": "無題",
+    "mateProblem": "{moves}手詰め"
+  },
+
+  "source": {
+    "shogiWars": "将棋ウォーズ"
+  },
+
+  "format": {
+    "evenGame": "手合割：平手",
+    "kifHeader": "手数----指手---------消費時間--"
+  },
+
+  "symbol": {
+    "sente": "▲",
+    "gote": "△"
+  },
+
+  "common": {
+    "language": "言語",
+    "japanese": "日本語",
+    "english": "English",
+    "back": "戻る",
+    "next": "次へ",
+    "prev": "前へ",
+    "close": "閉じる",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "copy": "コピー",
+    "share": "共有",
+    "loading": "読み込み中…",
+    "error": "エラー",
+    "success": "成功",
+    "confirm": "確認",
+    "yes": "はい",
+    "no": "いいえ",
+    "search": "検索",
+    "filter": "フィルター",
+    "sort": "並び替え",
+    "page": "ページ",
+    "of": "/",
+    "seconds": "秒",
+    "minutes": "分",
+    "hostname": "ホスト名",
+    "engine": "エンジン",
+    "approx": "約",
+    "serverError": "サーバーエラーが発生しました"
+  },
+
+  "agent": {
+    "label": "エージェント",
+    "localAgents": "ローカルエージェント",
+    "online": "オンライン ({count})",
+    "noConnected": "接続中のエージェントはありません",
+    "connectionGuide": "接続方法:",
+    "step1": "1. ShogiAgent.exe を起動",
+    "step2": "2. 表示されたURLをこのブラウザで開く",
+    "step3": "3. 承認ボタンを押す",
+    "registered": "登録済み",
+    "noRegistered": "登録されたエージェントはありません",
+    "downloadWindows": "Windows版をダウンロード",
+    "downloadMac": "Mac版をダウンロード",
+    "confirmDelete": "このエージェントを削除しますか？",
+    "anotherDeviceInUse": "別のデバイスが使用中です",
+    "otherDeviceInUse": "他のデバイスが使用中",
+    "loadingInfo": "エージェント情報を取得中…",
+    "confirmConnection": "以下のエージェントをあなたのアカウントに接続しますか？",
+    "nameOptional": "エージェント名 (任意)",
+    "enterAuthCode": "ShogiAgent に表示された認証コードを入力",
+    "authCodePlaceholder": "例: A3F7B2E1",
+    "codeNotMatch": "認証コードが一致しません",
+    "approving": "承認中…",
+    "approve": "承認する",
+    "approved": "承認しました",
+    "willConnect": "エージェントが自動的に接続を完了します。",
+    "approvalTitle": "ローカルエージェントの承認"
+  },
+
+  "accountMenu": {
+    "loggedIn": "ログイン中",
+    "myProfile": "マイプロフィール",
+    "settings": "設定",
+    "sharedGames": "共有した棋譜一覧",
+    "contact": "お問い合わせ",
+    "downloadAndroid": "Androidアプリをダウンロード",
+    "logout": "ログアウト"
+  },
+
+  "analysis": {
+    "title": "棋譜解析",
+    "exitCondition": "終了条件",
+    "range": "解析範囲",
+    "positions": " 局面",
+    "positionLabel": "局面",
+    "depthLabel": "深さ",
+    "timeLabel": "時間",
+    "nodesLabel": "ノード数",
+    "kilo": "K",
+    "startBtn": "棋譜解析を開始",
+    "stopBtn": "停止",
+    "complete": "完了",
+    "expand": "展開",
+    "collapse": "最小化",
+    "remainingApprox": "残り約",
+    "disabledDuringGame": "検討中は棋譜解析を開始できません"
+  },
+
+  "sidebar": {
+    "new": "新規",
+    "open": "開く",
+    "save": "保存",
+    "cloud": "クラウド",
+    "review": "検討",
+    "analyze": "解析",
+    "kifInfo": "棋譜情報",
+    "editPos": "局面編集",
+    "settings": "設定",
+    "flip": "反転",
+    "tree": "ツリー",
+    "openFile": "ファイルを開く",
+    "paste": "貼り付け",
+    "shogiWars": "将棋ウォーズ棋譜",
+    "saveWithEval": "評価値を含めて保存",
+    "saveNoEval": "評価値なしで保存",
+    "createLink": "共有リンクを作成",
+    "shareAsTsume": "詰将棋として共有"
+  },
+
+  "nav2": {
+    "branch": "分岐手順を指しています",
+    "returnToMain": "本譜に戻す",
+    "toMainBranch": "本譜の分岐点へ",
+    "prevMove": "← 前",
+    "nextMove": "次 →",
+    "start": "開始",
+    "end": "最終",
+    "moveTree": "手順ツリー",
+    "flipBoard": "盤面を反転",
+    "newGame": "新規作成",
+    "saveKif": "保存",
+    "openFile": "ファイルを開く",
+    "paste": "貼り付け"
+  },
+
+  "cloud": {
+    "title": "クラウド棋譜",
+    "noRecords": "保存された棋譜はありません",
+    "delete": "削除",
+    "load": "読み込み",
+    "saving": "保存中…",
+    "saved": "保存しました",
+    "deleteConfirm": "この棋譜をクラウドから削除しますか？",
+    "loadError": "棋譜の読み込みに失敗しました",
+    "deleteError": "削除に失敗しました"
+  },
+
+  "update": {
+    "newVersion": "新しいバージョンが利用可能です",
+    "updateNow": "今すぐ更新",
+    "dismiss": "閉じる"
+  },
+
+  "candidates": {
+    "title": "候補手 / 読み筋",
+    "saved": "保存済み",
+    "thinking": "思考中",
+    "ready": "解析完了",
+    "error": "エンジンエラー",
+    "standby": "スタンバイ",
+    "connecting": "接続中",
+    "multiPVLabel": "候補手数 (MultiPV)",
+    "cannotConnect": "エンジンに接続できません。",
+    "waiting": "エンジンの解析結果を待っています…",
+    "matePrefix": "詰",
+    "pvLabel": "読み筋",
+    "tapToShow": "タップで表示 →",
+    "clickToShowPV": "クリックで読み筋を表示"
+  },
+
+  "meter": {
+    "mate": "詰み",
+    "sente": "先手 (▲)",
+    "gote": "後手 (△)"
+  },
+
+  "graph": {
+    "title": "形勢グラフ",
+    "blunder": "悪手",
+    "dubious": "疑問手",
+    "good": "好手",
+    "evalLabel": "評価値",
+    "onBranch": "分岐中 ({{n}}手目〜)",
+    "senteAdv": "先手有利",
+    "goteAdv": "後手有利",
+    "clickToJump": "クリックで移動",
+    "noDataHint": "局面を進めると評価値が記録されます",
+    "mate": "詰み",
+    "branchMoveLabel": "分岐{{n}}手",
+    "moveLabel": "{{n}}手"
+  },
+
+  "moveList": {
+    "moves": "指し手",
+    "timeUsed": "消費",
+    "initialPosition": "開始局面",
+    "senteWins": "▲先手の勝ち",
+    "goteWins": "△後手の勝ち"
+  },
+
+  "game": {
+    "inCheck": "王手"
+  },
+
+  "pvboard": {
+    "title": "読み筋プレビュー",
+    "currentPos": "現局面",
+    "moveStep": "{{n}}手目: {{label}}"
+  }
+}

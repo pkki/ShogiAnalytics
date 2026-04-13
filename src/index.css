@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+@keyframes formation-announce {
+  0%   { opacity: 0; transform: scale(0.8) translateY(8px); }
+  15%  { opacity: 1; transform: scale(1.05) translateY(0); }
+  25%  { transform: scale(1) translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+.formation-announce {
+  animation: formation-announce 2s ease-in-out forwards;
+}
+
+@keyframes indeterminate {
+  0%   { left: -40%; width: 40%; }
+  50%  { left: 30%;  width: 55%; }
+  100% { left: 100%; width: 40%; }
+}
+
+/* タップ時の白枠（フォーカスアウトライン）を非表示 */
+*:focus {
+  outline: none;
+}
+/* キーボード操作時のみフォーカスリングを表示（アクセシビリティ維持） */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  background: #111827;
+  color: #F9FAFB;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+.piece-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.piece-cell:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.eval-bar-transition {
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 左サイドバー: スクロールバーを非表示にして自然なスクロールを維持 */
+.sidebar-no-scroll::-webkit-scrollbar {
+  display: none;
+}
+.sidebar-no-scroll {
+  scrollbar-width: none;
+}
+
+.graph-gradient {
+  background: linear-gradient(135deg, #1e3a5f 0%, #111827 100%);
+}

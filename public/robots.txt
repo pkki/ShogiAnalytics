@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: https://analytics.pkkis.com/sitemap.xml

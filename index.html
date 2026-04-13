@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja" id="html-root">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#111827" />
+    <!-- title is managed by react-helmet-async -->
+    <meta name="description" content="将棋アナリティクスは、AIエンジンを使って将棋の棋譜を解析・検討できる無料サービスです。棋譜の読み込み・保存・共有、リアルタイム対局、形勢グラフなどの機能を提供します。" />
+    <meta name="keywords" content="将棋,棋譜解析,AI将棋,将棋分析,棋譜共有,将棋アナリティクス,将棋エンジン,形勢グラフ,詰将棋,詰将棋オンライン,shogi,shogi analysis,kifu,tsume shogi,shogi analytics" />
+    <link rel="canonical" href="https://analytics.pkkis.com/" />
+    <!-- hreflang: 日本語・英語 SEO -->
+    <link rel="alternate" hreflang="ja" href="https://analytics.pkkis.com/" />
+    <link rel="alternate" hreflang="en" href="https://analytics.pkkis.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://analytics.pkkis.com/" />
+    <!-- OGP -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="将棋アナリティクス | Shogi Analytics" />
+    <meta property="og:title" content="将棋アナリティクス | AIを使った将棋棋譜解析・共有サービス" />
+    <meta property="og:description" content="将棋アナリティクスは、AIエンジンを使って将棋の棋譜を解析・検討できる無料サービスです。棋譜の読み込み・保存・共有、リアルタイム対局、形勢グラフなどの機能を提供します。 / AI-powered shogi game record analysis and sharing service." />
+    <meta property="og:url" content="https://analytics.pkkis.com/" />
+    <meta property="og:image" content="https://analytics.pkkis.com/icons/icon-512x512.png" />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Shogi Analytics | AI-powered Shogi Game Record Analysis" />
+    <meta name="twitter:description" content="Analyze shogi game records with your home PC USI engine. View candidate moves, evaluation graphs, and principal variations in real time. Free service." />
+    <meta name="twitter:image" content="https://analytics.pkkis.com/icons/icon-512x512.png" />
+    <!-- 構造化データ (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "将棋アナリティクス",
+      "alternateName": "Shogi Analytics",
+      "description": "AIエンジンを使って将棋の棋譜を解析・検討できる無料サービス。AI-powered shogi game record analysis using your home PC USI engine.",
+      "url": "https://analytics.pkkis.com/",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web, Android",
+      "inLanguage": ["ja", "en"],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "JPY"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+  </body>
+</html>

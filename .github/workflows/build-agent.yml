@@ -1,0 +1,284 @@
+name: Build ShogiAgent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'local-agent/**'
+      - '.github/workflows/build-agent.yml'
+  workflow_dispatch:
+
+jobs:
+  # ── Windows ビルド ─────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: local-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: local-agent
+
+      - name: Build Windows portable EXE
+        run: npm run build:app
+        working-directory: local-agent
+
+      # ルートにコピーしてアーティファクトのパスを単純化
+      - name: Stage artifact
+        run: copy local-agent\dist\ShogiAgent-portable.exe ShogiAgent-portable.exe
+        shell: cmd
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win
+          path: ShogiAgent-portable.exe
+          retention-days: 1
+
+  # ── Mac ビルド ─────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: local-agent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: local-agent
+
+      - name: Build Mac ZIP (arm64 + x64)
+        run: npm run build:app:mac
+        working-directory: local-agent
+
+      - name: List build output
+        run: ls -la local-agent/dist/
+
+      # ルートにコピーしてアーティファクトのパスを単純化
+      - name: Stage artifacts
+        run: |
+          cp local-agent/dist/ShogiAgent-mac-arm64.zip ./ShogiAgent-mac-arm64.zip 2>/dev/null || true
+          cp local-agent/dist/ShogiAgent-mac-x64.zip  ./ShogiAgent-mac-x64.zip  2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: ShogiAgent-mac-arm64.zip
+          retention-days: 1
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64
+          path: ShogiAgent-mac-x64.zip
+          retention-days: 1
+          if-no-files-found: warn
+
+  # ── ウイルススキャン (ClamAV + VirusTotal) ─────────────────
+  # 事前準備: Secrets に VIRUSTOTAL_API_KEY を登録
+  scan:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    outputs:
+      summary: ${{ steps.summarize.outputs.summary }}
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Install ClamAV & update virus definitions
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clamav
+          sudo systemctl stop clamav-freshclam 2>/dev/null || true
+          sudo freshclam --quiet
+
+      - name: Scan with ClamAV
+        id: clamav
+        run: |
+          {
+            echo "================================================"
+            echo " ClamAV Scan Report"
+            echo "================================================"
+            echo "Date   : $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "Commit : ${{ github.sha }}"
+            echo "ClamAV : $(clamscan --version)"
+            echo ""
+          } > scan-report.txt
+
+          set +e
+          clamscan --recursive --verbose artifacts/ 2>&1 >> scan-report.txt
+          CLAM_EXIT=$?
+          set -e
+
+          echo "clam_exit=${CLAM_EXIT}" >> "$GITHUB_OUTPUT"
+          if [ $CLAM_EXIT -ne 0 ]; then
+            echo "::error::ClamAV detected threats! Release blocked."
+          else
+            echo "✅ ClamAV: clean"
+          fi
+
+      - name: Scan with VirusTotal
+        id: virustotal
+        env:
+          VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          {
+            echo ""
+            echo "================================================"
+            echo " VirusTotal Scan Report"
+            echo "================================================"
+          } >> scan-report.txt
+
+          VT_MALICIOUS=0
+
+          for FILE in $(find artifacts -type f | sort); do
+            BASENAME=$(basename "$FILE")
+            echo "" >> scan-report.txt
+            echo "--- ${BASENAME} ---" >> scan-report.txt
+
+            # Upload file
+            UPLOAD=$(curl -s --request POST \
+              --url "https://www.virustotal.com/api/v3/files" \
+              --header "x-apikey: ${VT_API_KEY}" \
+              --form "file=@${FILE}")
+            ANALYSIS_ID=$(echo "$UPLOAD" | jq -r '.data.id // empty' 2>/dev/null || echo "")
+
+            if [ -z "$ANALYSIS_ID" ]; then
+              ERR=$(echo "$UPLOAD" | jq -r '.error.message // "upload failed"' 2>/dev/null || echo "upload failed (invalid response)")
+              echo "Error: ${ERR}" >> scan-report.txt
+              continue
+            fi
+
+            # Poll until completed (max 5 min, every 20s)
+            RESULT=""
+            for i in $(seq 1 15); do
+              sleep 20
+              RESULT=$(curl -s --request GET \
+                --url "https://www.virustotal.com/api/v3/analyses/${ANALYSIS_ID}" \
+                --header "x-apikey: ${VT_API_KEY}")
+              STATUS=$(echo "$RESULT" | jq -r '.data.attributes.status' 2>/dev/null || echo "")
+              [ "$STATUS" = "completed" ] && break
+            done
+
+            MALICIOUS=$(echo  "$RESULT" | jq -r '.data.attributes.stats.malicious  // 0' 2>/dev/null || echo "0")
+            SUSPICIOUS=$(echo "$RESULT" | jq -r '.data.attributes.stats.suspicious // 0' 2>/dev/null || echo "0")
+            HARMLESS=$(echo   "$RESULT" | jq -r '.data.attributes.stats.harmless   // 0' 2>/dev/null || echo "0")
+            UNDETECTED=$(echo "$RESULT" | jq -r '.data.attributes.stats.undetected // 0' 2>/dev/null || echo "0")
+            SHA256=$(echo     "$RESULT" | jq -r '.meta.file_info.sha256            // ""' 2>/dev/null || echo "")
+
+            {
+              echo "SHA256     : ${SHA256}"
+              echo "Malicious  : ${MALICIOUS}"
+              echo "Suspicious : ${SUSPICIOUS}"
+              echo "Harmless   : ${HARMLESS}"
+              echo "Undetected : ${UNDETECTED}"
+              [ -n "$SHA256" ] && echo "Link       : https://www.virustotal.com/gui/file/${SHA256}"
+            } >> scan-report.txt
+
+            VT_MALICIOUS=$((VT_MALICIOUS + MALICIOUS))
+
+            # Rate limit: 4 req/min on free tier
+            sleep 15
+          done
+
+          echo "vt_malicious=${VT_MALICIOUS}" >> "$GITHUB_OUTPUT"
+          if [ "$VT_MALICIOUS" -gt 0 ]; then
+            echo "::warning::VirusTotal detected ${VT_MALICIOUS} malicious detections (non-blocking)."
+          else
+            echo "✅ VirusTotal: clean"
+          fi
+
+      - name: Summarize & gate
+        id: summarize
+        run: |
+          CLAM_EXIT=${{ steps.clamav.outputs.clam_exit }}
+          VT_MALICIOUS=${{ steps.virustotal.outputs.vt_malicious }}
+
+          CLAM_RESULT="✅ No threats"
+          [ "$CLAM_EXIT" -ne 0 ] && CLAM_RESULT="❌ Threats detected"
+
+          VT_RESULT="✅ 0 malicious"
+          [ "$VT_MALICIOUS" -gt 0 ] && VT_RESULT="⚠️ ${VT_MALICIOUS} malicious (要確認)"
+
+          {
+            echo 'summary<<EOF'
+            echo "🛡️ ClamAV    : ${CLAM_RESULT}"
+            echo "🔬 VirusTotal: ${VT_RESULT}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # ClamAV のみリリースをブロック。VT は警告のみ。
+          if [ "$CLAM_EXIT" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-report
+          path: scan-report.txt
+
+  # ── 公開リポジトリの Release にアップロード ───────────────
+  # リリース先: ShogiAnalytics-releases (public repo)
+  # 事前準備:
+  #   1. GitHub で "ShogiAnalytics-releases" という Public リポジトリを作成
+  #   2. PAT (repo スコープ) を取得
+  #   3. このリポジトリの Secrets に RELEASES_TOKEN として登録
+  release:
+    needs: [build-windows, build-mac, scan]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List downloaded files
+        run: find artifacts -type f
+
+      - name: Delete existing release and tag (if any)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          REPO="${{ github.repository_owner }}/ShogiAnalytics-releases"
+          gh release delete agent-latest \
+            --repo "$REPO" \
+            --cleanup-tag \
+            --yes 2>/dev/null || true
+
+      - name: Create public release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          SCAN_SUMMARY: ${{ needs.scan.outputs.summary }}
+        run: |
+          REPO="${{ github.repository_owner }}/ShogiAnalytics-releases"
+          FILES=$(find artifacts -type f ! -name "scan-report.txt" | tr '\n' ' ')
+          SCAN_REPORT=$(find artifacts -name "scan-report.txt" | head -1)
+          {
+            echo "ビルド日時: $(date '+%Y-%m-%d %H:%M UTC')  /  コミット: ${{ github.sha }}"
+            echo ""
+            echo "${SCAN_SUMMARY}"
+            echo ""
+            echo "添付の scan-report.txt でスキャン詳細を確認できます。"
+          } > release-notes.txt
+          gh release create agent-latest \
+            --repo "$REPO" \
+            --title "ShogiAgent Latest" \
+            --notes-file release-notes.txt \
+            $FILES ${SCAN_REPORT}

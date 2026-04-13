@@ -1,0 +1,752 @@
+{
+  "appName": "Shogi Analytics",
+  "appTagline": "AI-powered Shogi Game Record Analysis & Sharing",
+  "appDescription": "Shogi Analytics is a free service for analyzing and reviewing shogi game records using AI engines. Features include KIF/CSA import, cloud save, sharing, real-time games, and evaluation graphs.",
+
+  "nav": {
+    "features": "Features",
+    "howto": "How to Use",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "openApp": "Open App",
+    "login": "Login",
+    "startFree": "Start Free",
+    "menu": "Menu",
+    "profile": "Profile",
+    "mainApp": "Main App",
+    "tsume": "Tsume Shogi",
+    "tsumeList": "Latest Tsume Puzzles",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "home": "Home"
+  },
+
+  "header": {
+    "playing": "Playing",
+    "ended": "Game Over",
+    "game": "Game",
+    "engineSettings": "Engine Settings"
+  },
+
+  "home": {
+    "badge": "Use your home PC shogi AI from your smartphone",
+    "typingWords": ["Away from home", "On your phone", "Anywhere"],
+    "heroHeadline": "Analyze with your home shogi AI",
+    "whatYouCanDo": "What this service does",
+    "whatYouCanDoDesc": "Connect your home PC shogi AI engine (YaneuraOu, Suisho, etc.) so you can use it from your smartphone or tablet while away.",
+    "whatYouCanDoNote": "The engine runs on your PC. This service acts as the bridge.",
+    "heroDesc": "Load game records in KIF/CSA format and analyze. View candidate moves, evaluation graphs, and principal variations in real time. Save analysis results to the cloud and access them from anywhere.",
+    "startFree": "Start Free",
+    "openApp": "Open App",
+    "engineConnected": "Home PC engine connected",
+    "sente": "Sente advantage",
+
+    "stats": {
+      "loadingUsers": "Loading…",
+      "userSuffix": "",
+      "users": "Registered Users",
+      "price": "Price (all features)",
+      "format": "Supported Formats",
+      "operation": "Operation",
+      "operationVal": "Indie",
+      "note": "※ Developed and operated by an individual as a hobby. Issue response times may vary."
+    },
+
+    "howItWorks": {
+      "badge": "How It Works",
+      "title": "How does it work?",
+      "step1Title": "① USI Engine on your home PC",
+      "step1Desc": "A USI-compatible engine like YaneuraOu runs on your home PC. All heavy analysis is done on your machine.",
+      "step2Title": "② local-agent bridges the connection",
+      "step2Desc": "Launch local-agent on your PC to connect it to this web service via WebRTC P2P. Engine communication does not pass through the server.",
+      "step3Title": "③ Check results on your phone",
+      "step3Desc": "Enter a game record from your smartphone or tablet browser, and your home PC engine analyzes and returns the results.",
+      "warningTitle": "Your home PC must be running for remote analysis",
+      "warningDesc": "Since the engine runs on your home PC, you need the PC on and local-agent running to analyze from outside. This requires keeping the PC running or having a remote wake setup. Even without an account (guest mode), you can load and browse records, but engine analysis requires a local-agent connection."
+    },
+
+    "features": {
+      "badge": "Features",
+      "title": "Key Features",
+      "engine": { "title": "Real-time USI Engine Analysis", "desc": "The USI engine on your home PC (connected via local-agent) shows candidate moves, evaluation scores, and principal variations in real time. MultiPV displays multiple candidates simultaneously." },
+      "graph": { "title": "Evaluation Graph", "desc": "Visualize evaluation score trends across all moves. Color-coded blunders, dubious moves, and good moves — click any point to jump to that position instantly." },
+      "batch": { "title": "Full-game Batch Analysis", "desc": "Load a KIF/CSA file and hit Analyze. The AI automatically analyzes every move and records the best move and evaluation for each position." },
+      "cloud": { "title": "Cloud Game Record Storage", "desc": "Save records with analysis to the server. Review or re-analyze from any device. Lightweight save without evaluation data is also available." },
+      "multi": { "title": "Multi-device Support", "desc": "UI optimized for PC, tablet, and smartphone. Split the workload between your home PC and mobile device." },
+      "tree": { "title": "Variation Tree", "desc": "Explore 'what if?' variations easily with the move tree. Variations can be exported to KIF format." },
+      "tsume": { "title": "Tsume Shogi Sharing", "desc": "Create and share tsume shogi puzzles from any position. The built-in solver automatically verifies the solution, and published puzzles are listed publicly for others to try." }
+    },
+
+    "tsume": {
+      "badge": "Tsume Shogi",
+      "title": "Create & Share Tsume Puzzles",
+      "desc": "Turn any position into a tsume shogi puzzle and share it with others. The solver automatically verifies the solution — no manual checking needed.",
+      "step1": "Set up a position",
+      "step1desc": "Load a game record or edit the board freely to create any position you like.",
+      "step2": "Share as Tsume",
+      "step2desc": "Click \"Share as Tsume\" in the sidebar. Set a title, description, and visibility, then publish.",
+      "step3": "Solve together",
+      "step3desc": "Anyone with the link can try solving the puzzle. Public puzzles appear in the shared tsume list.",
+      "cta": "Browse Tsume Puzzles",
+      "noteTitle": "Automatic solution verification",
+      "noteDesc": "A built-in solver checks the solution before publishing. Only positions with a valid checkmate sequence can be shared."
+    },
+
+    "tech": {
+      "engine": "Engine Protocol",
+      "webrtc": "Direct Browser Connection",
+      "security": "Security Standard",
+      "p2p": "Engine traffic bypasses server"
+    },
+
+    "howto": {
+      "badge": "How to Use",
+      "title": "How to Use",
+      "subtitle": "Easy setup. Up and running in minutes.",
+      "step1Title": "Create an account (free)",
+      "step1Desc": "Register with your email and password. Start using immediately after email verification.",
+      "step1Detail": "No registration or usage fees. No credit card required.",
+      "step2Title": "Launch local-agent on your PC",
+      "step2Desc": "Connect your installed USI engine via local-agent. Pairing is done by scanning a QR code.",
+      "step2Detail": "Compatible engines: YaneuraOu, Suisho, dlshogi, and any USI-compatible engine. Engine traffic is peer-to-peer via WebRTC.",
+      "step3Title": "Load a game record and start analyzing",
+      "step3Desc": "Open a KIF/CSA file or paste text. Hit Analyze to auto-analyze every move.",
+      "step3Detail": "After analysis, evaluation graphs, candidate moves, and variations are recorded for every move. KIF export and cloud save are also available.",
+      "security": { "title": "About Security", "body": "All communication is encrypted with HTTPS/TLS. JWT token authentication protects your game record data. Engine communication is peer-to-peer via WebRTC, so the server never sees the AI's analysis." },
+      "guest": { "title": "Try it now in guest mode", "body": "You can use the app as a guest without creating an account. KIF loading and board browsing are available immediately. Engine analysis and cloud save require login." },
+      "pc": { "title": "A home PC is required", "body": "Analysis requires a USI engine on your home PC. Smartphone alone cannot perform engine analysis. With your PC on and local-agent running, you can analyze from anywhere." }
+    },
+
+    "faq": {
+      "badge": "FAQ",
+      "title": "Frequently Asked Questions",
+      "q1": "What USI engines are supported?",
+      "a1": "Any USI-compatible engine works. You can connect YaneuraOu, Suisho, dlshogi, Gikou, Apery, or any other USI engine that runs on your PC.",
+      "q2": "Can I use engine analysis on my smartphone alone?",
+      "a2": "No. The engine runs on your home PC, so your PC must be on and local-agent must be running to analyze from outside.",
+      "q3": "Do I have to leave my home PC on when I go out?",
+      "a3": "Yes, if you want to analyze from outside. The PC must not be asleep and local-agent must remain running. You can also use WoL (Wake on LAN) for remote startup.",
+      "q4": "What game record formats are supported?",
+      "a4": "KIF format (.kif / .kifu) and CSA format (.csa) are supported. Shift-JIS KIF files are automatically detected and loaded.",
+      "q5": "Is there a cost?",
+      "a5": "All features are currently free. As this is an indie project, pricing may change in the future, but advance notice will be given before any paid plans.",
+      "q6": "Are cloud-saved records safe?",
+      "a6": "JWT authentication ensures only your account can access your records. However, since this is personally operated, we recommend keeping local backups of important records."
+    },
+
+    "contact": {
+      "badge": "Contact",
+      "title": "Contact Us",
+      "desc": "Bug reports, feature requests, and questions welcome here.\nAs this is personally operated, replies may take some time.",
+      "loginRequired": "You need to be logged in to send a message.",
+      "loginBtn": "Login / Register Free",
+      "sent": "Message Sent",
+      "sentDesc": "Your inquiry has been received. We will reply as soon as we can.",
+      "sendAnother": "Send another message",
+      "subject": "Subject",
+      "subjectPlaceholder": "Bug report, feature request, other",
+      "body": "Message",
+      "bodyPlaceholder": "Please describe your inquiry in as much detail as possible.",
+      "submit": "Send",
+      "submitting": "Sending…",
+      "error": "An error occurred",
+      "networkError": "A network error occurred"
+    },
+
+    "cta": {
+      "headline1": "Your home shogi AI,",
+      "headline2": "anywhere.",
+      "free": "Free to register. No credit card needed.",
+      "features": ["All features free", "KIF / CSA support", "PC & mobile ready", "USI engine support"],
+      "startFree": "Start Free"
+    },
+
+    "footer": {
+      "desc": "A personal-project web app for shogi game record analysis using your home PC USI engine from anywhere.",
+      "product": "Product",
+      "features": "Features",
+      "howto": "How to Use",
+      "openApp": "Open App",
+      "support": "Support",
+      "contact": "Contact",
+      "tech": "Tech Info",
+      "copyright": "Indie project",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    }
+  },
+
+  "login": {
+    "title": "Login / Sign Up | Shogi Analytics",
+    "description": "Log in or sign up for Shogi Analytics to use AI game record analysis, cloud save, and sharing features.",
+    "loginPrompt": "Please log in",
+    "signupPrompt": "Create a new account",
+    "verifyPrompt": "Enter your email verification code",
+    "or": "or",
+    "email": "Email address",
+    "password": "Password",
+    "passwordHint": "Password (8+ characters)",
+    "passwordPlaceholder": "8+ characters",
+    "login": "Login",
+    "signup": "Send verification code",
+    "verify": "Verify and continue",
+    "createAccount": "Create an account →",
+    "backToLogin": "← Back to login",
+    "backBtn": "← Back",
+    "resend": "Resend code",
+    "agreeTerms": "I agree to the",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "and": "and",
+    "verifyCode": "Verification code (6 digits)",
+    "verifyCodeSent": "A 6-digit verification code was sent to",
+    "processing": "Processing…",
+    "serverError": "A server error occurred"
+  },
+
+  "tsume": {
+    "title": "Tsume Shogi",
+    "categories": {
+      "1-5": "1–5 Move Mate",
+      "7-11": "7–11 Move Mate",
+      "13+": "13+ Move Mate",
+      "all": "All Tsume Shogi"
+    },
+    "moves": " moves",
+    "moveMate": "-move mate",
+    "unlisted": "Unlisted",
+    "by": "by",
+    "likes": "Likes",
+    "bookmarks": "Bookmarks",
+    "solved": "Solved",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "giveUp": "Show Answer",
+    "hint": "Hint",
+    "reset": "Reset",
+    "next": "Next",
+    "prev": "Previous",
+    "loading": "Loading…",
+    "notFound": "Tsume puzzle not found",
+    "backToList": "← Back to list",
+    "solveChallenges": "Solve Tsume Puzzles",
+    "recentTitle": "Recent Tsume Puzzles",
+    "noItems": "No tsume puzzles yet",
+    "categoryTitle": "Tsume Categories",
+    "seeAll": "See all tsume puzzles",
+    "list": "Tsume Puzzle List",
+    "sortRecent": "Recent",
+    "sortLikes": "Popular",
+    "none": "None",
+    "autoSolve": "Auto Solve",
+    "autoSolveStop": "Stop",
+    "solving": "Solving…",
+    "noSolution": "No solution",
+    "solution": "Solution",
+    "attackerTurn": "Attacker's turn",
+    "defenderTurn": "Defender's turn",
+    "share": "Share",
+    "edit": "Edit",
+    "delete": "Delete",
+    "visibility": {
+      "public": "Public",
+      "unlisted": "Unlisted",
+      "private": "Private"
+    }
+  },
+
+  "profile": {
+    "title": "'s Profile | Shogi Analytics",
+    "editProfile": "Edit Profile",
+    "save": "Save",
+    "cancel": "Cancel",
+    "posts": "Posts",
+    "bookmarks": "Bookmarks",
+    "tsumeCount": " tsume puzzles",
+    "noTsume": "No tsume puzzles yet",
+    "noBookmarks": "No bookmarks yet",
+    "loadError": "Failed to load profile",
+    "saveError": "Failed to save",
+    "backToTop": "← Back to top",
+    "anonymous": "Anonymous",
+    "displayName": "Display Name",
+    "bio": "Bio",
+    "avatarColor": "Avatar Color"
+  },
+
+  "share": {
+    "loading": "Loading…",
+    "loadingKifu": "Loading kifu…",
+    "moveList": "Move List",
+    "download": "Download KIF",
+    "evaluation": "Evaluation",
+    "candidates": "Candidates",
+    "notFound": "Kifu not found",
+    "failedToAnalyze": "Failed to analyze kifu",
+    "loadFailed": "Failed to load kifu",
+    "backToHome": "← Back to home",
+    "sharedKifu": "Shared kifu",
+    "back": "← Back",
+    "save": "Save",
+    "saveKifFile": "Save KIF file",
+    "readOnly": "Read-only",
+    "vs": "vs"
+  },
+
+  "app": {
+    "newGame": "New Position",
+    "openFile": "Open Record",
+    "saveFile": "Save Record",
+    "paste": "Paste Text",
+    "flip": "Flip Board",
+    "branch": "Variations",
+    "analysis": "Analysis",
+    "graph": "Eval Graph",
+    "cloud": "Cloud Save",
+    "delete": "Delete",
+    "share": "Share",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "loading": "Loading…",
+    "error": "An error occurred",
+    "saved": "Saved",
+    "copied": "Copied",
+    "promoting": "Promote?",
+    "promote": "Promote",
+    "noPromote": "Don't promote",
+    "sente": "Sente",
+    "gote": "Gote",
+    "winner": "Winner",
+    "loser": "Loser",
+    "draw": "Draw",
+    "resign": "Resign",
+    "checkmate": "Checkmate",
+    "timeUp": "Time up",
+    "moveNumber": " moves",
+    "evaluation": "Evaluation",
+    "depth": "Depth",
+    "nodes": "Nodes",
+    "speed": "Speed",
+    "candidates": "Candidates",
+    "principalVariation": "Principal Variation",
+    "analysisRunning": "Analyzing…",
+    "analysisStop": "Stop Analysis",
+    "analysisStart": "Start Analysis",
+    "engineNotConnected": "Engine not connected",
+    "connectEngine": "Please connect an engine",
+    "guestMode": "Guest Mode",
+    "loginRequired": "This feature requires login",
+    "cloudSaveSuccess": "Saved to cloud",
+    "cloudSaveError": "Failed to save",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "noKifu": "No game record",
+    "editMode": "Edit Mode",
+    "viewMode": "View Mode",
+    "initial": "Initial Position",
+    "formations": "Formations",
+    "autoAnalysis": "Auto Analysis",
+    "multiPV": "Multi PV",
+    "pvBoard": "PV Board",
+    "moveTree": "Move Tree",
+    "moveList": "Move List",
+    "evalMeter": "Eval Meter",
+    "showHide": "Show/Hide",
+    "good": "Good",
+    "okay": "Okay",
+    "bad": "Bad",
+    "blunder": "Blunder",
+    "book": "Book"
+  },
+
+  "result": {
+    "resign": "Resign",
+    "checkmate": "Checkmate",
+    "threefoldRepetition": "Perpetual check",
+    "heldPosition": "Held position",
+    "interrupted": "Interrupted",
+    "noCheckmate": "No checkmate possible",
+    "timeLoss": "Time loss",
+    "illegalMoveOpponent": "Opponent illegal move",
+    "illegalMoveOwn": "Illegal move",
+    "kingCaptureVictory": "King capture victory",
+    "noShowOpponent": "Opponent no-show",
+    "noShowOwn": "No-show"
+  },
+
+  "player": {
+    "sente": "Sente",
+    "gote": "Gote",
+    "you": "You",
+    "cpu": "AI"
+  },
+
+  "gameInfo": {
+    "startTime": "Start Date/Time",
+    "endTime": "End Date/Time",
+    "tournament": "Tournament",
+    "opening": "Opening",
+    "title": "Title",
+    "timeControl": "Time Control",
+    "byoyomi": "Byoyomi",
+    "timeUsed": "Time Used",
+    "venue": "Venue",
+    "source": "Source",
+    "notes": "Notes"
+  },
+
+  "dialog": {
+    "gameRecordInfo": "Game Record Information",
+    "tsumePuzzleSettings": "Tsume Puzzle Settings",
+    "tsumeAnalyzing": "Analyzing tsume…"
+  },
+
+  "error": {
+    "kifParsingFailed": "Failed to analyze kifu. Please check KIF / KIFU / CSA format.",
+    "kifPartialLoadFailure": "Failed to load moves from line {moveNumber}. Lines up to move {prevMoveNumber} loaded successfully.",
+    "clipboardEmpty": "Clipboard is empty.",
+    "clipboardAccessDenied": "Clipboard access denied. Check your browser permissions.",
+    "tsumeSharingFailed": "Tsume sharing error: {message}",
+    "tsumeNoSolution": "No solution found",
+    "tsumeNoSolution30": "No solution found (position doesn't lead to checkmate or exceeds 30 moves)",
+    "tsumeNoSolutionMaxDepth": "No solution found (exceeds maximum depth or doesn't lead to checkmate)",
+    "solutionConversionFailed": "Failed to convert solution",
+    "sharingFailed": "Sharing error: {message}",
+    "analysisFailed": "Analysis error: {message}",
+    "cloudSaveFailed": "Cloud save error: {message}",
+    "cloudLoadFailed": "Cloud load error: {message}",
+    "cloudDeleteFailed": "Cloud delete error: {message}",
+    "networkNotSupported": "Network not supported",
+    "webrtcConnectionFailed": "Could not establish engine connection (WebRTC) on this network."
+  },
+
+  "button": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "copy": "Copy",
+    "copied": "Copied ✓",
+    "copyLink": "Copy link",
+    "resign": "Resign",
+    "suspend": "Suspend",
+    "close": "Close",
+    "hideDetails": "Hide details",
+    "details": "Details",
+    "engineForceRestart": "Force engine restart",
+    "restart": "Restart"
+  },
+
+  "menu": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "cloud": "Cloud",
+    "analysis": "Analysis",
+    "tree": "Move Tree",
+    "flip": "Flip",
+    "evalBar": "Eval Bar",
+    "evalGraph": "Graph",
+    "candidateMoves": "Candidates",
+    "gameRecordInfo": "Game Info",
+    "positionEdit": "Edit Position",
+    "settings": "Settings",
+    "openFile": "Open file",
+    "paste": "Paste",
+    "shogiWarsRecord": "Shogi Wars record",
+    "saveWithEval": "Save with evaluation",
+    "saveWithoutEval": "Save without evaluation",
+    "createShareLink": "Create share link",
+    "shareAsTsume": "Share as tsume puzzle"
+  },
+
+  "share": {
+    "created": "Share link created",
+    "publicNote": "Anyone with this link can view",
+    "openInNewTab": "Open in new tab →",
+    "unlistedNote": "Unlisted — only people with the link can access",
+    "publicListNote": "Public — shown in tsume puzzle list"
+  },
+
+  "modal": {
+    "tsumeAnalyzing": "Analyzing tsume…"
+  },
+
+  "progress": {
+    "searchingMate": "Searching for {moves}-move mate",
+    "searchingMateJsSolver": "Searching for {moves}-move mate",
+    "analyzing": "Analyzing with engine",
+    "mate": "{moves}-move mate",
+    "currentMoves": "Currently {moves} moves",
+    "maxMoves": "Can analyze up to {moves} moves",
+    "engineSearching": "Engine searching"
+  },
+
+  "help": {
+    "deeperMatesLonger": "Deeper mates take longer to solve. You can cancel and stop analysis anytime."
+  },
+
+  "form": {
+    "title": "Title",
+    "titlePlaceholder": "E.g., 3-move mate, block king's escape route...",
+    "descriptionPlaceholder": "Explanation or intent of this tsume puzzle..."
+  },
+
+  "confirm": {
+    "deleteFromCloud": "Delete this game record from cloud?",
+    "deleteShareLink": "Delete the share link for \"{title}\"?"
+  },
+
+  "section": {
+    "troubleshooting": "Possible causes and solutions"
+  },
+
+  "troubleshoot": {
+    "firewall": "Firewall / Proxy",
+    "firewallExplanation": "Your network (corporate/school) may block WebRTC UDP communication. Ask your network admin to open UDP ports 3478, 19302.",
+    "switchToMobile": "Try switching to mobile data",
+    "mobileExplanation": "Try turning off Wi-Fi and connecting via your phone's mobile network.",
+    "tryVPN": "Try a VPN",
+    "vpnExplanation": "VPN can help bypass NAT traversal restrictions.",
+    "differentNetwork": "Try a different network",
+    "differentNetworkExplanation": "Try again on a less-restricted network like home Wi-Fi or personal hotspot."
+  },
+
+  "status": {
+    "yourTurn": "Your turn",
+    "gameEnded": "Game ended",
+    "engineStarting": "Engine starting up",
+    "analyzeNotDuringGame": "Cannot analyze while playing."
+  },
+
+  "panel": {
+    "gameAnalysis": "Game analysis",
+    "cloudRecords": "Cloud game records"
+  },
+
+  "info": {
+    "analyzeNotDuringGame": "Cannot analyze while playing."
+  },
+
+  "default": {
+    "untitled": "Untitled",
+    "mateProblem": "{moves}-move mate"
+  },
+
+  "source": {
+    "shogiWars": "Shogi Wars"
+  },
+
+  "format": {
+    "evenGame": "Handicap: even game",
+    "kifHeader": "Move--Moves---Elapsed Time--"
+  },
+
+  "symbol": {
+    "sente": "▲",
+    "gote": "△"
+  },
+
+  "common": {
+    "language": "Language",
+    "japanese": "日本語",
+    "english": "English",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "copy": "Copy",
+    "share": "Share",
+    "loading": "Loading…",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "page": "Page",
+    "of": "of",
+    "seconds": "s",
+    "minutes": "m",
+    "hostname": "Hostname",
+    "engine": "Engine",
+    "approx": "approx.",
+    "serverError": "A server error occurred"
+  },
+
+  "agent": {
+    "label": "Agent",
+    "localAgents": "Local Agents",
+    "online": "Online ({count})",
+    "noConnected": "No agents connected",
+    "connectionGuide": "How to connect:",
+    "step1": "1. Launch ShogiAgent.exe",
+    "step2": "2. Open the displayed URL in this browser",
+    "step3": "3. Click the Approve button",
+    "registered": "Registered",
+    "noRegistered": "No registered agents",
+    "downloadWindows": "Download for Windows",
+    "downloadMac": "Download for Mac",
+    "confirmDelete": "Delete this agent?",
+    "anotherDeviceInUse": "Another device is using this agent",
+    "otherDeviceInUse": "Another device is in use",
+    "loadingInfo": "Loading agent info…",
+    "confirmConnection": "Connect this agent to your account?",
+    "nameOptional": "Agent name (optional)",
+    "enterAuthCode": "Enter the auth code shown in ShogiAgent",
+    "authCodePlaceholder": "e.g. A3F7B2E1",
+    "codeNotMatch": "Auth code does not match",
+    "approving": "Approving…",
+    "approve": "Approve",
+    "approved": "Approved",
+    "willConnect": "The agent will complete the connection automatically.",
+    "approvalTitle": "Approve Local Agent"
+  },
+
+  "accountMenu": {
+    "loggedIn": "Signed in",
+    "myProfile": "My Profile",
+    "settings": "Settings",
+    "sharedGames": "Shared Game Records",
+    "contact": "Contact",
+    "downloadAndroid": "Download Android App",
+    "logout": "Logout"
+  },
+
+  "analysis": {
+    "title": "Game Analysis",
+    "exitCondition": "Stop condition",
+    "range": "Analysis range",
+    "positions": " positions",
+    "positionLabel": "pos.",
+    "depthLabel": "depth",
+    "timeLabel": "Time",
+    "nodesLabel": "Nodes",
+    "kilo": "K",
+    "startBtn": "Start Analysis",
+    "stopBtn": "Stop",
+    "complete": "Done",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "remainingApprox": "approx. remaining",
+    "disabledDuringGame": "Cannot run analysis while playing"
+  },
+
+  "sidebar": {
+    "new": "New",
+    "open": "Open",
+    "save": "Save",
+    "cloud": "Cloud",
+    "review": "Review",
+    "analyze": "Analyze",
+    "kifInfo": "Record Info",
+    "editPos": "Edit Pos",
+    "settings": "Settings",
+    "flip": "Flip",
+    "tree": "Tree",
+    "openFile": "Open file",
+    "paste": "Paste",
+    "shogiWars": "Shogi Wars",
+    "saveWithEval": "Save with eval",
+    "saveNoEval": "Save w/o eval",
+    "createLink": "Create share link",
+    "shareAsTsume": "Share as tsume"
+  },
+
+  "nav2": {
+    "branch": "On variation",
+    "returnToMain": "Return to main line",
+    "toMainBranch": "Go to branch point",
+    "prevMove": "← Prev",
+    "nextMove": "Next →",
+    "start": "Start",
+    "end": "End",
+    "moveTree": "Move Tree",
+    "flipBoard": "Flip Board",
+    "newGame": "New",
+    "saveKif": "Save",
+    "openFile": "Open",
+    "paste": "Paste"
+  },
+
+  "cloud": {
+    "title": "Cloud Records",
+    "noRecords": "No saved records",
+    "delete": "Delete",
+    "load": "Load",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "deleteConfirm": "Delete this record from cloud?",
+    "loadError": "Failed to load record",
+    "deleteError": "Failed to delete"
+  },
+
+  "update": {
+    "newVersion": "New version available",
+    "updateNow": "Update Now",
+    "dismiss": "Dismiss"
+  },
+
+  "candidates": {
+    "title": "Candidates / PV",
+    "saved": "Saved",
+    "thinking": "Thinking",
+    "ready": "Analysis complete",
+    "error": "Engine error",
+    "standby": "Standby",
+    "connecting": "Connecting",
+    "multiPVLabel": "Candidates (MultiPV)",
+    "cannotConnect": "Cannot connect to engine.",
+    "waiting": "Waiting for engine analysis…",
+    "matePrefix": "M",
+    "pvLabel": "PV",
+    "tapToShow": "Tap to show →",
+    "clickToShowPV": "Click to show PV"
+  },
+
+  "meter": {
+    "mate": "Mate",
+    "sente": "Sente (▲)",
+    "gote": "Gote (△)"
+  },
+
+  "graph": {
+    "title": "Eval Graph",
+    "blunder": "Blunder",
+    "dubious": "Dubious",
+    "good": "Good",
+    "evalLabel": "Eval",
+    "onBranch": "On variation (from move {{n}})",
+    "senteAdv": "Sente advantage",
+    "goteAdv": "Gote advantage",
+    "clickToJump": "Click to jump",
+    "noDataHint": "Evaluation will be recorded as you advance",
+    "mate": "Mate",
+    "branchMoveLabel": "+{{n}}",
+    "moveLabel": "{{n}}"
+  },
+
+  "moveList": {
+    "moves": "Moves",
+    "timeUsed": "Time",
+    "initialPosition": "Initial position",
+    "senteWins": "▲Sente wins",
+    "goteWins": "△Gote wins"
+  },
+
+  "game": {
+    "inCheck": "Check!"
+  },
+
+  "pvboard": {
+    "title": "PV Preview",
+    "currentPos": "Current position",
+    "moveStep": "Move {{n}}: {{label}}"
+  }
+}

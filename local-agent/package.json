@@ -1,0 +1,86 @@
+{
+  "name": "shogi-local-agent",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ShogiAnalytics Local Agent — USI engine bridge with GUI",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node index.js",
+    "electron": "electron .",
+    "build:app": "electron-builder build --win portable",
+    "build:app:mac": "electron-builder build --mac zip",
+    "build:exe": "pkg . --targets node20-win-x64 --output dist/ShogiAgent-cli.exe --compress GZip",
+    "build:exe:mac:x64": "pkg . --targets node20-macos-x64 --output dist/ShogiAgent-cli-mac-x64 --compress GZip",
+    "build:exe:mac:arm64": "pkg . --targets node20-macos-arm64 --output dist/ShogiAgent-cli-mac-arm64 --compress GZip"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/node-datachannel/build/Release/*.node",
+      "node_modules/node-datachannel/prebuilds/**/*.node"
+    ],
+    "targets": [
+      "node20-win-x64",
+      "node20-macos-x64",
+      "node20-macos-arm64"
+    ]
+  },
+  "build": {
+    "appId": "com.shogianalytics.agent",
+    "productName": "ShogiAgent",
+    "copyright": "ShogiAnalytics",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "icons/icon-512x512.png"
+    },
+    "portable": {
+      "artifactName": "ShogiAgent-portable.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "icons/icon-512x512.png",
+      "category": "public.app-category.utilities",
+      "artifactName": "ShogiAgent-mac-${arch}.zip"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "ui/**",
+      "node_modules/socket.io-client/**",
+      "node_modules/engine.io-client/**",
+      "node_modules/engine.io-parser/**",
+      "node_modules/socket.io-parser/**",
+      "node_modules/@socket.io/**",
+      "!node_modules/.cache/**",
+      "!**/*.{ts,ts.map,d.ts}"
+    ],
+    "npmRebuild": false
+  },
+  "dependencies": {
+    "node-datachannel": "^0.32.1",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.12.0",
+    "electron": "^41.0.4",
+    "electron-builder": "^26.8.1"
+  }
+}

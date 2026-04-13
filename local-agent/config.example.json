@@ -1,0 +1,9 @@
+{
+  "_comment": "このファイルを config.json にリネームして設定を記入してください。agentToken は初回起動時のペアリングで自動取得されます。",
+  "_enginePath_windows": "例: D:\\将棋エンジン\\YaneuraOu_NNUE_halfkp_512x2_8_64-V900Git_AVX2.exe",
+  "_enginePath_mac":     "例: /Users/yourname/shogi/YaneuraOu  (実行権限が必要: chmod +x YaneuraOu)",
+  "serverUrl": "http://localhost:3010",
+  "agentToken": "",
+  "enginePath": "",
+  "multiPv": 5
+}
