@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { X, Search, RotateCcw, CheckCircle2, Scale } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // ── オプション種別ごとのコントロール ─────────────────────────
 function SpinControl({ opt, value, onChange }) {
@@ -57,6 +58,7 @@ function StringControl({ value, onChange }) {
 }
 
 function OptionRow({ opt, value, onChange, isChanged }) {
+  const { t } = useTranslation();
   const control = (() => {
     switch (opt.type) {
       case 'spin':              return <SpinControl  opt={opt} value={value} onChange={onChange} />;
@@ -68,7 +70,7 @@ function OptionRow({ opt, value, onChange, isChanged }) {
           onClick={() => onChange('__button__')}
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-white transition-colors"
         >
-          実行
+          {t('engineSettingsDialog.execute')}
         </button>
       );
       default: return <span className="text-gray-500 text-xs">{opt.type}</span>;
@@ -86,7 +88,7 @@ function OptionRow({ opt, value, onChange, isChanged }) {
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">{opt.type}</span>
           {opt.default !== '' && (
-            <span className="text-[10px] text-gray-500">デフォルト: {opt.default}</span>
+            <span className="text-[10px] text-gray-500">{t('engineSettingsDialog.defaultLabel')} {opt.default}</span>
           )}
           {opt.type === 'spin' && opt.min !== undefined && (
             <span className="text-[10px] text-gray-600">[{opt.min}〜{opt.max}]</span>
@@ -101,26 +103,27 @@ function OptionRow({ opt, value, onChange, isChanged }) {
 // ── ライセンス情報（ブラウザエンジン用） ──────────────────────
 const LICENSE_ENTRIES = [
   {
+    key: 'yaneuraou',
     name: 'やねうら王 (YaneuraOu)',
     license: 'GNU GPL v3',
-    note: 'このアプリはやねうら王のWASMビルドを使用しています。GPL v3のコピーレフト条項により、ソースコードの開示が必要です。',
     url: 'https://github.com/yaneurao/YaneuraOu',
   },
   {
+    key: 'suishoPetite',
     name: 'SuishoPetite 評価関数',
     license: '独自ライセンス（非商用推奨）',
-    note: '明示的なライセンス文書はありませんが、やねうら王のGPL v3の傘下で配布されています。商用利用の場合は配布元への確認を推奨します。',
     url: 'https://github.com/mizar/YaneuraOu',
   },
   {
+    key: 'suisho5',
     name: '水匠5 (Suisho5) 評価関数',
     license: '独自ライセンス（非商用推奨）',
-    note: '明示的なライセンス文書はありませんが、やねうら王のGPL v3の傘下で配布されています。商用利用の場合は配布元への確認を推奨します。',
     url: 'https://github.com/yaneurao/YaneuraOu/releases/tag/suisho5',
   },
 ];
 
 function LicenseSection() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <div className="mx-5 mb-3 rounded-xl border border-gray-700/60 bg-gray-800/40 overflow-hidden shrink-0">
@@ -130,14 +133,14 @@ function LicenseSection() {
       >
         <span className="flex items-center gap-2 text-xs font-bold text-gray-400">
           <Scale size={13} className="text-gray-500" />
-          使用エンジン・ライセンス情報
+          {t('engineSettingsDialog.licenseTitle')}
         </span>
         <span className="text-gray-600 text-xs">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
         <div className="px-4 pb-4 flex flex-col gap-3">
           {LICENSE_ENTRIES.map(entry => (
-            <div key={entry.name} className="flex flex-col gap-1 pt-3 border-t border-gray-700/40 first:border-t-0 first:pt-0">
+            <div key={entry.key} className="flex flex-col gap-1 pt-3 border-t border-gray-700/40 first:border-t-0 first:pt-0">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-bold text-white">{entry.name}</span>
                 <a
@@ -152,13 +155,14 @@ function LicenseSection() {
               <span className="inline-block text-[10px] font-mono bg-gray-700 text-yellow-300 px-1.5 py-0.5 rounded w-fit">
                 {entry.license}
               </span>
-              <p className="text-[10px] text-gray-500 leading-relaxed">{entry.note}</p>
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                {t(`engineSettingsDialog.licenses.${entry.key}.note`)}
+              </p>
             </div>
           ))}
           <div className="pt-3 border-t border-gray-700/40">
             <p className="text-[10px] text-gray-600 leading-relaxed">
-              GPL v3の要件として、このアプリのソースコードは公開されています。
-              商用利用・再配布を行う場合はGPL v3の条項を遵守してください。
+              {t('engineSettingsDialog.licenseFooter')}
             </p>
           </div>
         </div>
@@ -169,6 +173,7 @@ function LicenseSection() {
 
 // ── メインダイアログ ─────────────────────────────────────────
 export default function EngineSettingsDialog({ options, onClose, onApply, engineStatus, engineMessage, suisho5Ready, isBrowserEngine }) {
+  const { t } = useTranslation();
   // 「適用」した時点の値をbaselineとして保持。適用後に更新することで
   // 「適用→別の値に戻す」操作でも変更ありとみなせる。
   const [baseline, setBaseline] = useState(() => {
@@ -243,8 +248,8 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 shrink-0">
           <div>
-            <h2 className="text-base font-bold text-white">エンジン設定</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{options.length} 個のオプション</p>
+            <h2 className="text-base font-bold text-white">{t('engineSettingsDialog.title')}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{t('engineSettingsDialog.optionCount', { count: options.length })}</p>
           </div>
           <button onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white">
@@ -257,7 +262,7 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
           <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
             <Search size={14} className="text-gray-500 shrink-0" />
             <input
-              type="text" placeholder="オプションを検索…"
+              type="text" placeholder={t('engineSettingsDialog.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1 bg-transparent text-sm text-white placeholder-gray-600
@@ -270,17 +275,17 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
         {changedOptions.length > 0 && !applied && (
           <div className="mx-5 mt-3 shrink-0 px-3 py-2 bg-blue-900/30 border border-blue-700/50
             rounded-lg flex items-center justify-between text-xs">
-            <span className="text-blue-300">{changedOptions.length} 件の変更があります</span>
+            <span className="text-blue-300">{t('engineSettingsDialog.changedCount', { count: changedOptions.length })}</span>
             <button onClick={handleResetAll}
               className="flex items-center gap-1 text-gray-400 hover:text-white">
-              <RotateCcw size={11} /> すべてリセット
+              <RotateCcw size={11} /> {t('engineSettingsDialog.resetAll')}
             </button>
           </div>
         )}
         {applied && (
           <div className="mx-5 mt-3 shrink-0 px-3 py-2 bg-green-900/30 border border-green-700/50
             rounded-lg text-xs text-green-300 flex items-center gap-1.5">
-            <CheckCircle2 size={12} /> エンジンに設定を送信しました
+            <CheckCircle2 size={12} /> {t('engineSettingsDialog.applied')}
           </div>
         )}
 
@@ -296,7 +301,7 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
         {/* オプション一覧 */}
         <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-1">
           {filtered.length === 0 && (
-            <p className="text-gray-600 text-sm text-center py-8">一致するオプションがありません</p>
+            <p className="text-gray-600 text-sm text-center py-8">{t('engineSettingsDialog.noResults')}</p>
           )}
           {filtered.map(opt => (
             <div key={opt.name} className="relative group">
@@ -312,7 +317,7 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
                   onClick={() => handleReset(opt.name)}
                   className="absolute right-24 top-1/2 -translate-y-1/2 p-1 rounded
                     text-gray-600 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="デフォルトに戻す"
+                  title={t('engineSettingsDialog.resetToDefault')}
                 >
                   <RotateCcw size={11} />
                 </button>
@@ -328,7 +333,7 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-700 shrink-0">
           <button onClick={onClose}
             className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm text-white transition-colors">
-            閉じる
+            {t('engineSettingsDialog.close')}
           </button>
           <button
             onClick={handleApply}
@@ -336,7 +341,7 @@ export default function EngineSettingsDialog({ options, onClose, onApply, engine
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700
               disabled:text-gray-500 text-sm text-white font-bold transition-colors"
           >
-            適用 {changedOptions.length > 0 ? `(${changedOptions.length})` : ''}
+            {t('engineSettingsDialog.apply')} {changedOptions.length > 0 ? `(${changedOptions.length})` : ''}
           </button>
         </div>
       </div>

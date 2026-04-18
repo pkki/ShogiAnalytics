@@ -748,5 +748,33 @@
     "title": "読み筋プレビュー",
     "currentPos": "現局面",
     "moveStep": "{{n}}手目: {{label}}"
+  },
+
+  "engineSettingsDialog": {
+    "title": "エンジン設定",
+    "optionCount": "{{count}} 個のオプション",
+    "searchPlaceholder": "オプションを検索…",
+    "changedCount": "{{count}} 件の変更があります",
+    "resetAll": "すべてリセット",
+    "applied": "エンジンに設定を送信しました",
+    "noResults": "一致するオプションがありません",
+    "defaultLabel": "デフォルト:",
+    "resetToDefault": "デフォルトに戻す",
+    "execute": "実行",
+    "close": "閉じる",
+    "apply": "適用",
+    "licenseTitle": "使用エンジン・ライセンス情報",
+    "licenseFooter": "GPL v3の要件として、このアプリのソースコードは公開されています。商用利用・再配布を行う場合はGPL v3の条項を遵守してください。",
+    "licenses": {
+      "yaneuraou": {
+        "note": "このアプリはやねうら王のWASMビルドを使用しています。GPL v3のコピーレフト条項により、ソースコードの開示が必要です。"
+      },
+      "suishoPetite": {
+        "note": "明示的なライセンス文書はありませんが、やねうら王のGPL v3の傘下で配布されています。商用利用の場合は配布元への確認を推奨します。"
+      },
+      "suisho5": {
+        "note": "明示的なライセンス文書はありませんが、やねうら王のGPL v3の傘下で配布されています。商用利用の場合は配布元への確認を推奨します。"
+      }
+    }
   }
 }

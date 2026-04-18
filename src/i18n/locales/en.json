@@ -748,5 +748,33 @@
     "title": "PV Preview",
     "currentPos": "Current position",
     "moveStep": "Move {{n}}: {{label}}"
+  },
+
+  "engineSettingsDialog": {
+    "title": "Engine Settings",
+    "optionCount": "{{count}} options",
+    "searchPlaceholder": "Search options…",
+    "changedCount": "{{count}} change(s) pending",
+    "resetAll": "Reset all",
+    "applied": "Settings sent to engine",
+    "noResults": "No matching options",
+    "defaultLabel": "Default:",
+    "resetToDefault": "Reset to default",
+    "execute": "Execute",
+    "close": "Close",
+    "apply": "Apply",
+    "licenseTitle": "Used Engines & Licenses",
+    "licenseFooter": "As required by GPL v3, the source code of this app is publicly available. If you use or redistribute it commercially, please comply with the GPL v3 terms.",
+    "licenses": {
+      "yaneuraou": {
+        "note": "This app uses a WASM build of YaneuraOu. Due to GPL v3 copyleft, source code disclosure is required."
+      },
+      "suishoPetite": {
+        "note": "No explicit license document, but distributed under the umbrella of YaneuraOu's GPL v3. Commercial use requires confirmation with the distributor."
+      },
+      "suisho5": {
+        "note": "No explicit license document, but distributed under the umbrella of YaneuraOu's GPL v3. Commercial use requires confirmation with the distributor."
+      }
+    }
   }
 }

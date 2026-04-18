@@ -445,6 +445,27 @@ async function readFileText(file) {
 export default function App() {
   const { t } = useTranslation();
   const [state, dispatch] = useReducer(reducer, null, makeInitState);
+
+  // ── 駒音 ──────────────────────────────────────────────────
+  const moveAudioRef   = useRef(null);
+  const prevNodesCount = useRef(0);
+  useEffect(() => {
+    moveAudioRef.current = new Audio('/attack.mp3');
+    moveAudioRef.current.preload = 'auto';
+    moveAudioRef.current.volume = 0.3;
+    prevNodesCount.current = Object.keys(state.nodes).length;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const count = Object.keys(state.nodes).length;
+    if (count - prevNodesCount.current === 1) {
+      if (moveAudioRef.current) {
+        moveAudioRef.current.currentTime = 0;
+        moveAudioRef.current.play().catch(() => {});
+      }
+    }
+    prevNodesCount.current = count;
+  }, [state.nodes]);
+
   const [pvCandidate, setPvCandidate] = useState(null);
   const [gameInfo, setGameInfo] = useState(() => loadSession()?.gameInfo ?? GAME_INFO);
   const [kifError, setKifError] = useState(null);
