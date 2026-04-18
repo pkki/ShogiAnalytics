@@ -1,209 +1,132 @@
 <div align="center">
+  <img src="public/icons/icon-512x512.png" alt="ShogiAnalytics" width="128" />
 
-# ♘ ShogiAnalytics
+  <h1>ShogiAnalytics</h1>
+  <p><strong>将棋の力を、深く。次世代の対局分析プラットフォーム</strong></p>
 
-**将棋の力を分析する - 次世代の対局分析ツール**
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-0.0.0-green.svg)
-![React](https://img.shields.io/badge/React-19.2.4-61DAFB?logo=react&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?logo=vite&logoColor=white)
-
+  <p>
+    <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
+    <img src="https://img.shields.io/badge/Vite-8.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+    <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+    <img src="https://img.shields.io/badge/Capacitor-7-119EFF?style=for-the-badge&logo=capacitor&logoColor=white" />
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Socket.io-4.8-010101?style=for-the-badge&logo=socket.io&logoColor=white" />
+    <img src="https://img.shields.io/badge/i18n-日本語%20/%20English-red?style=for-the-badge" />
+    <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" />
+  </p>
 </div>
 
 ---
 
-## 🎯 プロジェクト概要
+## 概要
 
-**ShogiAnalytics** は、YaneuraOu USI エンジンと連携する、最新の将棋対局分析プラットフォームです。web ブラウザ及びモバイルデバイスから直感的に将棋の局面を分析し、棋力向上をサポートします。
+**ShogiAnalytics** は、YaneuraOu USI エンジンと連携するリアルタイム将棋分析アプリです。ブラウザでもスマートフォンでも、プロ級の解析をすぐに使える UI で提供します。
 
-このリポジトリは **フロントエンド部分** を管理しています。バックエンド（エンジン連携・分析API）は別リポジトリで開発・管理されています。
-
-### ✨ 主な機能
-
-- 🤖 **高性能エンジン連携** - YaneuraOu USI エンジンによる最強レベルの分析
-- 📊 **視覚的な棋譜分析** - 評価値グラフと候補手の分析表示
-- 🔄 **リアルタイム分析** - Socket.io による非同期分析結果の即座反映
-- 📱 **モバイル対応** - Capacitor で iOS/Android ネイティブアプリ化
-- 🌍 **多言語対応** - 日本語・英語自動切り替え (i18next)
-- ♟️ **直感的な盤面操作** - タッチ操作対応の高速な駒の操作感
-- 💾 **棋譜保存・管理** - 分析結果の永続化と管理機能
+> このリポジトリは **フロントエンド**のみです。エンジン連携・分析API は別リポジトリ（非公開）で管理されています。
 
 ---
 
-## 🛠️ 技術スタック
+## 機能
 
-- **React 19** - 最新の UI フレームワーク
-- **Vite** - 次世代の高速ビルドツール
-- **TailwindCSS** v3 - ユーティリティ first のスタイリング
-- **Socket.io Client** - リアルタイム通信
-- **React Router** v7 - ページナビゲーション
-- **Recharts** - 対局分析グラフの可視化
-- **Lucide React** - モダンなアイコン
-- **Capacitor** v7 - web アプリをモバイルネイティブ化
-- **i18next** - 多言語対応 (日本語・英語)
+| 機能 | 説明 |
+|------|------|
+| 🤖 エンジン解析 | YaneuraOu USI による深い候補手分析 |
+| 📊 評価値グラフ | 棋譜全体の形勢推移を視覚化 |
+| ♟️ インタラクティブ盤面 | タッチ対応・盤面反転・手戻しに完全対応 |
+| 🆚 AI 対局 | 段階別強さでAIと対戦 |
+| 📱 モバイルアプリ | Capacitor で Android ネイティブアプリ化 |
+| 🌍 多言語 | 日本語・英語に自動対応 |
+| 💾 棋譜管理 | 対局の保存・読み込み |
 
 ---
 
-## 📦 クイックスタート
+## 技術スタック
 
-### 必要な環境
-- **Node.js** 18+
-- **npm** または **yarn**
-
-### インストール
-
-```bash
-# リポジトリのクローン
-git clone https://github.com/yourusername/ShogiAnalytics.git
-cd ShogiAnalytics
-
-# 依存パッケージのインストール
-npm install
+```
+React 19 + Vite 8 ───── UI & ビルド
+TailwindCSS 3 ────────── スタイリング
+React Router 7 ──────── ルーティング
+Socket.io Client ────── バックエンドとのリアルタイム通信
+Recharts ────────────── 評価値グラフ
+Capacitor 7 ─────────── Android アプリ化
+i18next ─────────────── 多言語対応
 ```
 
-### 開発サーバーの起動
+---
+
+## クイックスタート
+
+### 必要な環境
+
+- **Node.js** 18+
+
+### セットアップ
 
 ```bash
-# 開発サーバーを起動 (http://localhost:5173)
+git clone https://github.com/pkki/ShogiAnalytics.git
+cd ShogiAnalytics
+npm install
 npm run dev
 ```
 
-> 📌 **注:** このリポジトリはフロントエンドのみです。バックエンド（エンジン連携・分析API）は別リポジトリで管理されています。
+開発サーバーが `http://localhost:5173` で起動します。
 
-### 本番ビルド
-
-```bash
-# フロントエンドをビルド
-npm run build
-
-# ビルド結果は dist/ ディレクトリに出力されます
-```
+> バックエンドサーバーが別途 `http://localhost:3001` で動いている必要があります。
 
 ---
 
-## 🚀 デプロイ・ビルド
-
-ビルドされた `dist/` ディレクトリは、任意の静的ファイルサーバーでホストできます：
+## ビルド & デプロイ
 
 ```bash
-# ビルド
+# Web 向けビルド（出力: dist/）
 npm run build
 
-# ビルド結果をプレビュー
-npm run preview
-```
-
-**Android アプリ化:**
-
-```bash
-# Capacitor で Android アプリをビルド
+# Android APK ビルド
 npm run android:apk
 ```
 
 ---
 
-## 📁 プロジェクト構成
+## プロジェクト構成
 
 ```
 ShogiAnalytics/
 ├── src/
-│   ├── App.jsx                      # メインアプリケーション
+│   ├── App.jsx                  # メインアプリ
 │   ├── components/
-│   │   ├── ShogiBoard.jsx          # 盤面表示・操作コンポーネント
-│   │   ├── GameSetupDialog.jsx     # AI 対局設定
-│   │   └── NavigationPanel.jsx     # ナビゲーション
+│   │   ├── ShogiBoard.jsx       # 盤面 UI
+│   │   ├── GameSetupDialog.jsx  # AI 対局設定
+│   │   └── NavigationPanel.jsx  # ナビゲーション
 │   └── state/
-│       └── gameState.js            # 棋譜・盤面ロジック
-├── public/                         # 静的アセット
-├── vite.config.js
-├── tailwind.config.js
-├── package.json
-└── android/                        # Capacitor Android プロジェクト
+│       └── gameState.js         # 棋譜・盤面ロジック
+├── public/
+│   └── icons/                   # アプリアイコン各サイズ
+└── android/                     # Capacitor Android プロジェクト
 ```
 
 ---
 
-## 🔧 設定
-
-### 環境変数
-
-`.env` ファイルを作成して、バックエンドサーバーの URL を指定できます：
-
-```
-VITE_API_URL=http://localhost:3001
-```
-
-### ポート設定
-
-- 開発サーバー: `http://localhost:5173`
-- バックエンド API: `http://localhost:3001` (デフォルト)
-
----
-
-## 📋 スクリプト一覧
+## スクリプト
 
 ```bash
-npm run dev              # 開発サーバーを起動
-npm run build           # 本番ビルド
-npm run lint            # ESLint でコード検査
-npm run preview         # ビルド結果をプレビュー
-npm run android:sync    # Android Capacitor を同期
-npm run android:open    # Android Studio を開く
-npm run android:apk     # Android APK をビルド
+npm run dev           # 開発サーバー起動
+npm run build         # 本番ビルド
+npm run preview       # ビルド結果プレビュー
+npm run lint          # ESLint 検査
+npm run android:sync  # Android 同期
+npm run android:open  # Android Studio 起動
+npm run android:apk   # APK ビルド
 ```
 
 ---
 
-## 🎮 使い方
+## ライセンス
 
-1. **初期局面から開始** または **棋譜を読み込み**
-2. **AI 対手の強さを設定** (複数段階)
-3. **盤面を操作** して対局進行
-4. **分析パネル** で評価値・候補手を確認
-5. **対局結果を保存** して後で確認
-
----
-
-## 🔐 セキュリティ
-
-本番環境にデプロイする際は、バックエンド（別リポジトリ）で以下の設定を確認してください：
-
-- CORS（Cross-Origin Resource Sharing）の適切な設定
-- Socket.io の認証・認可メカニズム
-- API エンドポイントの入力検証
-
----
-
-## 🤝 コントリビューション
-
-問題報告やプルリクエストをお気軽に！
-
-1. Fork してください
-2. Feature ブランチを作成 (`git checkout -b feature/AmazingFeature`)
-3. コミット (`git commit -m 'Add some AmazingFeature'`)
-4. プッシュ (`git push origin feature/AmazingFeature`)
-5. Pull Request を作成
-
----
-
-## 📝 ライセンス
-
-このプロジェクトは **MIT License** の下でライセンスされています。詳細は [LICENSE](LICENSE) をご覧ください。
-
----
-
-## 💬 お問い合わせ
-
-- **GitHub Issues** - バグ報告・機能リクエスト
-- **Discussions** - 議論・質問
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
-
-### 🌟 将棋の力を磨こう。ShogiAnalytics で。
-
-**Built with ♥️ for Shogi lovers worldwide**
-
+  <sub>Built with ♟️ for Shogi players worldwide</sub>
 </div>
