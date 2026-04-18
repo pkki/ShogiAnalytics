@@ -15,6 +15,9 @@
     <img src="https://img.shields.io/badge/i18n-日本語%20/%20English-red?style=for-the-badge" />
     <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" />
   </p>
+  <p>
+    <a href="https://analytics.pkkis.com"><strong>🌐 analytics.pkkis.com</strong></a>
+  </p>
 </div>
 
 ---
