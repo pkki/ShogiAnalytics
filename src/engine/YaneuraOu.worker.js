@@ -153,6 +153,17 @@ function handleUSILine(line) {
   }
 }
 
+function parseNodeCount(s) {
+  if (!s) return 0;
+  const m = s.match(/^(\d+\.?\d*)([KMkm]?)$/);
+  if (!m) return parseInt(s) || 0;
+  const n = parseFloat(m[1]);
+  const suffix = m[2].toUpperCase();
+  if (suffix === 'K') return Math.round(n * 1000);
+  if (suffix === 'M') return Math.round(n * 1000000);
+  return Math.round(n);
+}
+
 function parseInfoLine(line) {
   const tokens = line.split(' ');
   const get = (k) => { const i=tokens.indexOf(k); return i!==-1?tokens[i+1]:null; };
@@ -161,7 +172,7 @@ function parseInfoLine(line) {
   if (!depthStr) return;
   const depth   = parseInt(depthStr);
   const multipv = parseInt(get('multipv') || '1');
-  const nodes   = parseInt(get('nodes')   || '0');
+  const nodes   = parseNodeCount(get('nodes') || '0');
 
   let score=0, isMate=false, mateIn=null;
   const si = tokens.indexOf('score');

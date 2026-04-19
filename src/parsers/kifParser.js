@@ -2,6 +2,17 @@
 //  KIF / KIFU フォーマットパーサー
 // ============================================================
 
+function parseKifNodeCount(s) {
+  if (!s) return null;
+  const m = s.match(/^(\d+\.?\d*)([KMkm]?)$/);
+  if (!m) return parseInt(s) || null;
+  const n = parseFloat(m[1]);
+  const suffix = m[2].toUpperCase();
+  if (suffix === 'K') return Math.round(n * 1000);
+  if (suffix === 'M') return Math.round(n * 1000000);
+  return Math.round(n);
+}
+
 const FILE_KAN = { '１':1,'２':2,'３':3,'４':4,'５':5,'６':6,'７':7,'８':8,'９':9 };
 const RANK_KAN = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9 };
 const KANJI_TYPE = {
@@ -274,7 +285,7 @@ function parseCandidateComment(line) {
   const rankM = line.match(/候補(\d+)/);
   if (!rankM) return null;
   const depthM = line.match(/深さ\s+(\d+)/);
-  const nodesM = line.match(/ノード数\s+(\d+)/);
+  const nodesM = line.match(/ノード数\s+(\d+\.?\d*[KMkm]?)/);
   const evalM  = line.match(/評価値\s+(詰[-+]?\d+|[-+]?\d+)/);
   const pvM    = line.match(/読み筋\s+(.+)$/);
   const scoreStr = evalM ? evalM[1] : null;
@@ -291,7 +302,7 @@ function parseCandidateComment(line) {
   return {
     multipv: parseInt(rankM[1]),
     depth:   depthM ? parseInt(depthM[1]) : null,
-    nodes:   nodesM ? parseInt(nodesM[1]) : null,
+    nodes:   nodesM ? parseKifNodeCount(nodesM[1]) : null,
     score, isMate, mateIn,
     pvJP: pvM ? pvM[1].trim() : '',
   };

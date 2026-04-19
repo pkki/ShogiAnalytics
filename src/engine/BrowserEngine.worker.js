@@ -426,6 +426,7 @@ function think(sfen, maxDepthParam, timeLimitMs, mpv) {
       if (stopFlag) break;
       const { board: nb, hands: nh } = applyMove(board, hands, ms.mv, player);
       ms.score = -alphaBeta(nb, nh, opp(player), depth - 1, -INF, INF, 1);
+      ms.nodeCount = nodeCount;  // 各手のノード数を記録
     }
     if (stopFlag) break;
 
@@ -444,7 +445,7 @@ function think(sfen, maxDepthParam, timeLimitMs, mpv) {
         score:   ms.score,
         pvJP:    moveToJP(ms.mv, board, player),
         pvUSI:   toUSI(ms.mv),
-        nodes:   nodeCount,
+        nodes:   ms.nodeCount ?? nodeCount,  // 各 multipv に対応するノード数を使用
         isMate,
         mateIn,
       });
