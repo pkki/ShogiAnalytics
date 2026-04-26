@@ -2,7 +2,7 @@ import { useReducer, useCallback, useState, useEffect, useRef, useMemo } from 'r
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { createBrowserEngineAdapter, BROWSER_AGENT_ID, BROWSER_AGENT_INFO } from './engine/BrowserEngineAdapter';
-import { FilePlus, Download, FolderOpen, Clipboard, FlipHorizontal2, GitBranch, Cpu, BarChart2, X, Cloud, Trash2, Loader2, TrendingUp, ChevronLeft, ChevronRight, CornerUpLeft, Eye, EyeOff, List, Share2, Settings, PenSquare, Check, Info, Swords } from 'lucide-react';
+import { FilePlus, Download, FolderOpen, Clipboard, FlipHorizontal2, GitBranch, Cpu, BarChart2, X, Cloud, Trash2, Loader2, TrendingUp, ChevronLeft, ChevronRight, CornerUpLeft, Eye, EyeOff, List, Share2, Settings, PenSquare, Check, Info, Swords, Camera, BarChart3 } from 'lucide-react';
 import { io as socketIO } from 'socket.io-client';
 import { createWebRTCSocket } from './webrtc/bridge';
 import { Navigate } from 'react-router-dom';
@@ -25,6 +25,9 @@ import AutoAnalysis from './components/AutoAnalysis';
 import GameSetupDialog from './components/GameSetupDialog';
 import ShogiWarsDialog from './components/ShogiWarsDialog';
 import AccountSettingsDialog from './components/AccountSettingsDialog';
+import ImageImportDialog from './components/ImageImportDialog';
+import WeaknessAnalysisDialog from './components/WeaknessAnalysisDialog';
+import KifuWeaknessPanel from './components/KifuWeaknessPanel';
 import UpdateBanner from './components/UpdateBanner';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import {
@@ -521,6 +524,10 @@ export default function App() {
 
   // ── 将棋ウォーズ取り込みダイアログ ──
   const [showShogiWars, setShowShogiWars] = useState(false);
+
+  // ── 画像読み込みダイアログ ──
+  const [showImageImport, setShowImageImport] = useState(false);
+  const [showWeaknessAnalysis, setShowWeaknessAnalysis] = useState(false);
 
   // ── アップデートバナー ──
   // PWA: useRegisterSW で新しい SW が待機中かを検知
@@ -1225,6 +1232,24 @@ export default function App() {
     const text = await readFileText(file);
     loadKifText(text);
   }, [loadKifText]);
+
+  // ── 画像から読み込んだ局面をセット ──
+  const handleImageApply = useCallback(({ board, hands, currentPlayer: cp }) => {
+    setKifError(null);
+    setKifTermination(null);
+    const tree = buildGameTree(board, hands);
+    // 手番情報をルートノードに付与
+    tree.nodes[tree.rootId].nextPlayer = cp;
+    dispatch({ type: 'LOAD_KIF', tree });
+    setGameInfo({
+      sente: { name: '先手', mark: '▲', time: '0:00:00' },
+      gote:  { name: '後手', mark: '△', time: '0:00:00' },
+      startTime: '', endTime: '', event: '', opening: '',
+      title: '', timeControl: '', byoyomi: '', timeUsed: '',
+      site: '', source: '', note: '',
+    });
+    setShowImageImport(false);
+  }, []);
 
   // ── 将棋ウォーズ棋譜を読み込む ──
   const loadShogiWarsGame = useCallback((record) => {
@@ -3333,6 +3358,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                       onClick={() => { mobileFileRef.current?.click(); closeMobileMenu(); }} />
                     <FlyoutItem icon={<Clipboard size={13} />} label="貼り付け"
                       onClick={() => { handlePasteKif(); closeMobileMenu(); }} />
+                    <FlyoutItem icon={<Camera size={13} />} label="画像から読み込み"
+                      onClick={() => { setShowImageImport(true); closeMobileMenu(); }} />
                     <div className="mx-1 my-0.5 border-t border-gray-700/60" />
                     <FlyoutItem icon={<Swords size={13} />} label="将棋ウォーズ棋譜"
                       onClick={() => { setShowShogiWars(true); closeMobileMenu(); }} />
@@ -3373,14 +3400,19 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                     </div>
                     <div className="overflow-y-auto py-2">
                       {gameMode !== 'playing' ? (
-                        <AutoAnalysis
-                          status={autoAnalysisStatus}
-                          progress={autoAnalysisProgress}
-                          totalMoves={state.mainLineIds.length - 1}
-                          onStart={(cond, from, to) => { if (handleStartAutoAnalysis(cond, from, to)) { setShowAnalysisPanel(false); closeMobileMenu(); } }}
-                          onStop={handleStopAutoAnalysis}
-                          disabled={isAnalyzing}
-                        />
+                        <>
+                          <AutoAnalysis
+                            status={autoAnalysisStatus}
+                            progress={autoAnalysisProgress}
+                            totalMoves={state.mainLineIds.length - 1}
+                            onStart={(cond, from, to) => { if (handleStartAutoAnalysis(cond, from, to)) { setShowAnalysisPanel(false); closeMobileMenu(); } }}
+                            onStop={handleStopAutoAnalysis}
+                            disabled={isAnalyzing}
+                          />
+                          {autoAnalysisStatus === 'complete' && (
+                            <KifuWeaknessPanel nodes={state.nodes} mainLineIds={state.mainLineIds} />
+                          )}
+                        </>
                       ) : (
                         <p className="text-xs text-gray-500 px-4 py-3">対局中は棋譜解析を使用できません。</p>
                       )}
@@ -3558,6 +3590,9 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                   if (editMode) { confirmEditPosition(); closeMobileMenu(); }
                   else { enterEditMode(); closeMobileMenu(); setShowSettingsPanel(false); setShowCloudPanel(false); setShowAnalysisPanel(false); setOpenFlyout(null); setOpenSaveMenu(null); }
                 }} />
+              {/* 弱点分析 */}
+              <MobileMenuBtn icon={<BarChart3 size={18} />} label="弱点分析"
+                onClick={() => { setShowWeaknessAnalysis(true); closeMobileMenu(); }} />
               {/* 設定 */}
               <MobileMenuBtn icon={<Settings size={18} />} label="設定"
                 active={showSettingsPanel}
@@ -3905,6 +3940,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                   onClick={() => { desktopFileRef.current?.click(); setOpenFlyout(null); }} />
                 <FlyoutItem icon={<Clipboard size={13} />} label={t('sidebar.paste')}
                   onClick={() => { handlePasteKif(); setOpenFlyout(null); }} />
+                <FlyoutItem icon={<Camera size={13} />} label="画像から読み込み"
+                  onClick={() => { setShowImageImport(true); setOpenFlyout(null); }} />
                 <div className="mx-1 my-0.5 border-t border-gray-700/60" />
                 <FlyoutItem icon={<Swords size={13} />} label={t('sidebar.shogiWars')}
                   onClick={() => { setShowShogiWars(true); setOpenFlyout(null); }} />
@@ -3969,6 +4006,11 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
             active={showAnalysisPanel || autoAnalysisStatus === 'running'}
             pulse={autoAnalysisStatus === 'running'}
           />
+          <SidebarAction
+            icon={<BarChart3 size={17} />}
+            label="弱点分析"
+            onClick={() => setShowWeaknessAnalysis(true)}
+          />
           <SidebarAction icon={<Info size={17} />} label={t('sidebar.kifInfo')}
             onClick={() => setShowKifInfo(true)}
           />
@@ -4006,14 +4048,19 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
             {/* パネル本体 */}
             <div className="flex-1 overflow-y-auto py-2">
               {gameMode !== 'playing' ? (
-                <AutoAnalysis
-                  status={autoAnalysisStatus}
-                  progress={autoAnalysisProgress}
-                  totalMoves={state.mainLineIds.length - 1}
-                  onStart={(cond, from, to) => { if (handleStartAutoAnalysis(cond, from, to)) setShowAnalysisPanel(false); }}
-                  onStop={handleStopAutoAnalysis}
-                  disabled={isAnalyzing}
-                />
+                <>
+                  <AutoAnalysis
+                    status={autoAnalysisStatus}
+                    progress={autoAnalysisProgress}
+                    totalMoves={state.mainLineIds.length - 1}
+                    onStart={(cond, from, to) => { if (handleStartAutoAnalysis(cond, from, to)) setShowAnalysisPanel(false); }}
+                    onStop={handleStopAutoAnalysis}
+                    disabled={isAnalyzing}
+                  />
+                  {autoAnalysisStatus === 'complete' && (
+                    <KifuWeaknessPanel nodes={state.nodes} mainLineIds={state.mainLineIds} />
+                  )}
+                </>
               ) : (
                 <p className="text-xs text-gray-500 px-4 py-3">対局中は棋譜解析を使用できません。</p>
               )}
@@ -4397,6 +4444,23 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
           onClose={() => setShowShogiWars(false)}
           onLoad={loadShogiWarsGame}
           defaultUsername={userSettings.swarUsername ?? ''}
+        />
+      )}
+
+      {/* 画像から盤面読み込みダイアログ */}
+      {showImageImport && (
+        <ImageImportDialog
+          onClose={() => setShowImageImport(false)}
+          onApply={handleImageApply}
+        />
+      )}
+
+      {/* 弱点分析ダイアログ */}
+      {showWeaknessAnalysis && (
+        <WeaknessAnalysisDialog
+          onClose={() => setShowWeaknessAnalysis(false)}
+          authToken={authToken}
+          apiBase={CLOUD_API}
         />
       )}
 

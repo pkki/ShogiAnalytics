@@ -46,7 +46,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         // API・Socket.io はキャッシュせず常にネットワーク経由
-        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/socket\.io/],
+        // /login はサーバー側で COOP ヘッダーを除外しているが SW のキャッシュが上書きするため除外
+        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/socket\.io/, /^\/login/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
