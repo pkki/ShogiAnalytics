@@ -16,6 +16,19 @@ jobs:
           cache: 'npm'
 
       - run: npm ci --legacy-peer-deps
+
+      - name: Create .env
+        run: |
+          cat > .env << EOF
+          VITE_SIGNALING_URL=${{ secrets.VITE_SIGNALING_URL }}
+          VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_TURNSTILE_SITE_KEY=${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_USE_WEBRTC=${{ secrets.VITE_USE_WEBRTC }}
+          VITE_AGENT_DOWNLOAD_WIN=${{ secrets.VITE_AGENT_DOWNLOAD_WIN }}
+          VITE_AGENT_DOWNLOAD_MAC=${{ secrets.VITE_AGENT_DOWNLOAD_MAC }}
+          VITE_ANDROID_DOWNLOAD_URL=${{ secrets.VITE_ANDROID_DOWNLOAD_URL }}
+          EOF
+
       - run: npm run build
 
       - name: Deploy dist
