@@ -20,6 +20,7 @@
     "fflate": "^0.8.2",
     "i18next": "^26.0.4",
     "i18next-browser-languagedetector": "^8.2.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.4",
+    "@techstark/opencv-js": "^4.12.0-release.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

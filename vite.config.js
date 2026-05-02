@@ -44,10 +44,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/opencv/**'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB
         navigateFallback: '/index.html',
         // API・Socket.io はキャッシュせず常にネットワーク経由
         // /login はサーバー側で COOP ヘッダーを除外しているが SW のキャッシュが上書きするため除外
-        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/socket\.io/, /^\/login/],
+        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/socket\.io/, /^\/login/, /^\/admin/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>

@@ -13,6 +13,7 @@ import TsumeListPage from './pages/TsumeListPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import TermsPage from './pages/TermsPage.jsx'
 import PrivacyPage from './pages/PrivacyPage.jsx'
+import AdminTrainingPage from './pages/AdminTrainingPage.jsx'
 
 function isPWAOrAPK() {
   // PWA standalone / fullscreen、またはAndroid APK (TWA) の判定
@@ -41,6 +42,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/profile/:userId" element={<ProfilePage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/admin/training" element={<AdminTrainingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
