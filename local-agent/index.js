@@ -207,12 +207,16 @@ function parseJwt(token) {
 }
 
 // ── DataChannel 送信ヘルパー ─────────────────────────────────
-let dataChannel = null;
+let dataChannel  = null;
+let sigSocketRef = null; // WebSocket リレーモード用 (module-level 参照)
 
 function emitToClient(event, data) {
   if (dataChannel && dataChannel.isOpen()) {
     try { dataChannel.sendMessage(JSON.stringify({ event, data })); }
     catch (e) { logWarn('DC', `送信エラー (${event}): ${e.message}`); }
+  } else if (sigSocketRef?.connected) {
+    // WebRTC DataChannel が開いていない場合はシグナリング経由でリレー
+    sigSocketRef.emit('relay', { event, data });
   }
 }
 
@@ -571,6 +575,7 @@ function startEngine() {
 
 function handleClientEvent(event, data) {
   switch (event) {
+    case 'request_status':  startEngine(); break; // WebSocket リレーモード: 現在のエンジン状態を再送
     case 'analyze':        if (data?.sfen) requestAnalysis(data.sfen); break;
     case 'stop':           pendingAnalysis = null; pendingTsume = null; if (isThinking && autoState === 'idle' && !aiThinkMode) { tsumeMode = false; sendEngine('stop'); } break;
     case 'set_options':    if (!Array.isArray(data) || !data.length) break; if (isThinking) { pendingOptions = data; sendEngine('stop'); } else applyOptions(data); break;
@@ -714,6 +719,12 @@ async function main() {
     reconnection:      true,
     reconnectionDelay: 3000,
   });
+  sigSocketRef = sigSocket;
+
+  // WebSocket リレーモード: WebRTC DataChannel が開いていない場合にフロントエンドからコマンドを受信
+  sigSocket.on('relay', ({ event, data }) => {
+    handleClientEvent(event, data);
+  });
 
   sigSocket.on('connect', () => {
     logOk('Sig', `接続完了 — フロントエンドの接続待機中`);
@@ -751,7 +762,13 @@ async function main() {
     }
   });
 
-  sigSocket.on('peer-joined', ({ role }) => logInfo('Sig', `peer joined: role=${role}`));
+  sigSocket.on('peer-joined', ({ role }) => {
+    logInfo('Sig', `peer joined: role=${role}`);
+    if (role === 'frontend') {
+      // WebSocket リレーモード: 新しいフロントエンドに現在のエンジン状態を再送
+      startEngine();
+    }
+  });
   sigSocket.on('peer-left',   ({ role }) => { logWarn('Sig', `peer left: role=${role}`); if (role === 'frontend') dataChannel = null; });
   sigSocket.on('disconnect',  (reason)  => logWarn('Sig', `切断: ${reason}`));
 }

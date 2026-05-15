@@ -362,3 +362,129 @@ export function createWebRTCSocket(token) {
 
   return socket;
 }
+
+// ============================================================
+//  WebRTC 対応チェック
+// ============================================================
+export function isWebRTCAvailable() {
+  return typeof RTCPeerConnection !== 'undefined';
+}
+
+// ============================================================
+//  createWebSocketRelaySocket
+//  WebRTC が使用できない場合のフォールバック。
+//  シグナリングサーバー経由で Socket.io relay イベントを使い
+//  local-agent とメッセージを双方向転送する。
+//  外部 API は createWebRTCSocket と同一 (.on/.emit/.disconnect)
+// ============================================================
+export function createWebSocketRelaySocket(token) {
+  const { userId } = parseJwt(token);
+
+  const handlers  = {};
+  let sigSk        = null;
+  let selectedAgentId  = null;
+  let isPassive        = false;
+  let manuallyDisplaced = false;
+
+  const socket = {
+    on(event, handler) {
+      if (!handlers[event]) handlers[event] = [];
+      handlers[event].push(handler);
+      return socket;
+    },
+    emit(event, data) {
+      if (event === '__select_agent') {
+        selectedAgentId = data;
+        return socket;
+      }
+      if (event === '__take_over') {
+        isPassive = false;
+        manuallyDisplaced = false;
+        selectedAgentId = data || null;
+        sigSk?.emit('take_over');
+        return socket;
+      }
+      sigSk?.emit('relay', { agentId: selectedAgentId, event, data });
+      return socket;
+    },
+    disconnect() {
+      try { sigSk?.disconnect(); } catch (_) {}
+    },
+  };
+
+  function fire(event, ...args) {
+    (handlers[event] || []).forEach((h) => {
+      try { h(...args); } catch (e) { console.error('[relay] handler error', event, e); }
+    });
+  }
+
+  sigSk = signalingIO(SERVER_URL, {
+    query:      { role: 'frontend' },
+    auth:       { token },
+    transports: ['websocket', 'polling'],
+  });
+
+  sigSk.on('connect', () => {
+    console.log('[relay] Signaling connected. userId:', userId);
+    fire('connect');
+  });
+
+  sigSk.on('connect_error', (err) => {
+    console.error('[relay] Signaling error:', err.message);
+    if (err.message.includes('invalid') || err.message.includes('token') || err.message.includes('expired')) {
+      localStorage.removeItem('shogi_jwt');
+      fire('auth_error', err);
+    }
+    fire('connect_error', err);
+  });
+
+  sigSk.on('another_device_active', () => {
+    // リレーモードでは WebRTC bridge の旧シグナリング接続が残っていることが多い（同一デバイスの接続切替）
+    // → 自動引き継ぎしてアクティブ化する
+    console.log('[relay] another_device_active → auto take_over (own previous session)');
+    sigSk.emit('take_over');
+  });
+
+  sigSk.on('taken_over', () => {
+    // 別デバイスに手動引き継ぎされた場合 (リレーモードでは通常発生しない)
+    isPassive = true;
+    manuallyDisplaced = true;
+    fire('taken_over');
+    setTimeout(() => { if (!sigSk.connected) sigSk.connect(); }, 500);
+  });
+
+  sigSk.on('promoted', () => {
+    isPassive = false;
+    manuallyDisplaced = false;
+    fire('device_activated');
+  });
+
+  sigSk.on('device_activated', () => {
+    isPassive = false;
+    fire('device_activated');
+  });
+
+  sigSk.on('agent-connected', (agentInfo) => {
+    fire('agent:connected', agentInfo);
+    if (!isPassive && !selectedAgentId) {
+      selectedAgentId = agentInfo.agentId;
+      fire('agent:selected', agentInfo);
+      // 接続直後にエンジン現在状態を要求 (WebRTC の channel.onOpen 相当)
+      sigSk.emit('relay', { agentId: agentInfo.agentId, event: 'request_status', data: {} });
+    }
+  });
+
+  sigSk.on('agent-disconnected', ({ agentId }) => {
+    fire('agent:disconnected', { agentId });
+    if (selectedAgentId === agentId) {
+      selectedAgentId = null;
+      fire('agent:left');
+      fire('connect_error', new Error('Agent disconnected'));
+    }
+  });
+
+  // エンジンイベントをサーバー経由でリレー受信
+  sigSk.on('relay', ({ event, data }) => fire(event, data));
+
+  return socket;
+}

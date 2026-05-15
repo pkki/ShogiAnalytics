@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { createBrowserEngineAdapter, BROWSER_AGENT_ID, BROWSER_AGENT_INFO } from './engine/BrowserEngineAdapter';
 import { FilePlus, Download, FolderOpen, Clipboard, FlipHorizontal2, GitBranch, Cpu, BarChart2, X, Cloud, Trash2, Loader2, TrendingUp, ChevronLeft, ChevronRight, CornerUpLeft, Eye, EyeOff, List, Share2, Settings, PenSquare, Check, Info, Swords, Camera, BarChart3 } from 'lucide-react';
 import { io as socketIO } from 'socket.io-client';
-import { createWebRTCSocket } from './webrtc/bridge';
+import { createWebRTCSocket, createWebSocketRelaySocket, isWebRTCAvailable } from './webrtc/bridge';
 import { Navigate } from 'react-router-dom';
 import AgentPanel from './components/AgentPanel';
 import PairingDialog from './components/PairingDialog';
@@ -1052,6 +1052,12 @@ export default function App() {
   const [webrtcNetworkError, setWebrtcNetworkError] = useState(false);
   const [showWebrtcErrorDetail, setShowWebrtcErrorDetail] = useState(false);
   const iceFailCountRef = useRef(0);
+  // WebRTC が使用できない場合の WebSocket フォールバック
+  // webrtcNotSupported: ブラウザが RTCPeerConnection 未対応 (初回のみ判定)
+  const [webrtcNotSupported] = useState(
+    () => import.meta.env.VITE_USE_WEBRTC === 'true' && !isWebRTCAvailable()
+  );
+  const [useWebSocketFallback, setUseWebSocketFallback] = useState(false);
   // 棋譜共有
   const [shareUrl, setShareUrl]         = useState(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -1328,8 +1334,13 @@ export default function App() {
 
     let s;
     if (import.meta.env.VITE_USE_WEBRTC === 'true') {
-      // WebRTC モード: シグナリング経由で local-agent と DataChannel を確立
-      s = createWebRTCSocket(authToken);
+      if (!useWebSocketFallback && !webrtcNotSupported) {
+        // WebRTC モード: シグナリング経由で local-agent と DataChannel を確立
+        s = createWebRTCSocket(authToken);
+      } else {
+        // WebSocket リレーモード: WebRTC 非対応 or ICE 失敗によるフォールバック
+        s = createWebSocketRelaySocket(authToken);
+      }
     } else {
       // ローカル Socket.io モード (従来)
       // 開発時は Vite プロキシ経由で 3010 へ、本番ビルド時はサーバーと同一オリジン
@@ -1691,7 +1702,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       setSelectedAgentId(null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]);
+  }, [authToken, useWebSocketFallback]);
 
   // mainLineIds を ref に同期（自動解析のコールバックで使用）
   useEffect(() => { mainLineIdsRef.current = state.mainLineIds; }, [state.mainLineIds]);
@@ -3222,6 +3233,21 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
         </div>
       )}
 
+      {/* ── WebRTC 未対応通知バナー（ブラウザが RTCPeerConnection 非サポートの場合）── */}
+      {webrtcNotSupported && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] w-full max-w-sm px-4">
+          <div className="bg-yellow-900/90 border border-yellow-500/50 rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
+            <span className="text-yellow-400 text-lg leading-none shrink-0 mt-0.5">⚠</span>
+            <div className="text-sm">
+              <p className="text-yellow-100 font-semibold">WebRTCが使用できません</p>
+              <p className="text-yellow-300/80 mt-0.5">
+                このブラウザでは WebRTC に対応していないため、WebSocket（サーバー経由）で接続します。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── WebRTC ネットワーク非対応バナー ── */}
       {webrtcNetworkError && (
         <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
@@ -3235,6 +3261,17 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                 </p>
               </div>
             </div>
+            <button
+              onClick={() => {
+                setWebrtcNetworkError(false);
+                setShowWebrtcErrorDetail(false);
+                iceFailCountRef.current = 0;
+                setUseWebSocketFallback(true);
+              }}
+              className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm text-white font-semibold transition-colors"
+            >
+              WebSocketで接続する（サーバー経由）
+            </button>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowWebrtcErrorDetail(v => !v)}
