@@ -12,6 +12,7 @@ const PIECE_DISPLAY = {
 };
 const HAND_PIECE_TYPES = ['R','B','G','S','N','L','P'];
 const ALL_PIECE_TYPES  = ['K','R','+R','B','+B','G','S','+S','N','+N','L','+L','P','+P'];
+const HAND_PIECE_MAX   = { R: 2, B: 2, G: 4, S: 4, N: 4, L: 4, P: 18 };
 
 // ── ユーティリティ ─────────────────────────────────────────────────────
 function imageToCanvas(imgEl) {
@@ -129,6 +130,9 @@ export default function ImageImportDialog({ onClose, onApply }) {
   const [statusMsg, setStatusMsg]     = useState('');
   const [result, setResult]           = useState(null);
   const [editedBoard, setEditedBoard] = useState(null);
+  const [editedHands, setEditedHands] = useState({ 1: {}, 2: {} });
+  const [handPreviews, setHandPreviews] = useState({ sente: null, gote: null });
+  const [scanWarnings, setScanWarnings] = useState([]);
   const [modelReady, setModelReady]   = useState(false);
   const [editingCell, setEditingCell] = useState(null);
   const [isRedetecting, setIsRedetecting] = useState(false);
@@ -149,7 +153,7 @@ export default function ImageImportDialog({ onClose, onApply }) {
   // 画像読み込み後にコーナー自動検出
   useEffect(() => {
     if (!imgEl) { setCorners(null); cornersRef.current = null; gridLinesRef.current = null; return; }
-    setResult(null); setEditedBoard(null); setStatus('idle'); setStatusMsg('');
+    setResult(null); setEditedBoard(null); setEditedHands({ 1: {}, 2: {} }); setHandPreviews({ sente: null, gote: null }); setScanWarnings([]); setStatus('idle'); setStatusMsg('');
 
     const w = imgEl.naturalWidth, h = imgEl.naturalHeight, p = 0.08;
     const fallback = [
@@ -291,6 +295,7 @@ export default function ImageImportDialog({ onClose, onApply }) {
         srcCanvas,
         corners: cornersRef.current,
         isGoteView,
+        sourceType: sourceTypeRef.current,
         model: modelRef.current,
         onProgress: p => setStatusMsg(`認識中... ${Math.round(p * 100)}%`),
       };
@@ -304,6 +309,15 @@ export default function ImageImportDialog({ onClose, onApply }) {
       }
       setResult(resultData);
       setEditedBoard(resultData.board.map(row => [...row]));
+      setEditedHands({
+        1: { ...resultData.hands[1] },
+        2: { ...resultData.hands[2] },
+      });
+      setScanWarnings(resultData.warnings ?? []);
+      setHandPreviews({
+        sente: resultData.handCanvases?.sente?.toDataURL() ?? null,
+        gote:  resultData.handCanvases?.gote?.toDataURL()  ?? null,
+      });
       setStatus('done');
       setStatusMsg('認識完了！マスをクリックして駒を修正できます。確認後「この局面をセット」を押してください。');
     } catch (e) {
@@ -313,8 +327,8 @@ export default function ImageImportDialog({ onClose, onApply }) {
 
   const handleApply = useCallback(() => {
     if (!result || !editedBoard) return;
-    onApply({ board: editedBoard, hands: result.hands, currentPlayer });
-  }, [result, editedBoard, currentPlayer, onApply]);
+    onApply({ board: editedBoard, hands: editedHands, currentPlayer });
+  }, [result, editedBoard, editedHands, currentPlayer, onApply]);
 
   const handleCellClick = useCallback((row, col) => {
     setEditingCell(prev => (prev?.row === row && prev?.col === col) ? null : { row, col });
@@ -376,7 +390,7 @@ export default function ImageImportDialog({ onClose, onApply }) {
                       再検出
                     </button>
                     <button
-                      onClick={() => { setImgSrc(null); setImgEl(null); setCorners(null); setResult(null); setEditedBoard(null); setStatus('idle'); setStatusMsg(''); if (fileRef.current) fileRef.current.value = ''; }}
+                      onClick={() => { setImgSrc(null); setImgEl(null); setCorners(null); setResult(null); setEditedBoard(null); setEditedHands({ 1: {}, 2: {} }); setHandPreviews({ sente: null, gote: null }); setScanWarnings([]); setStatus('idle'); setStatusMsg(''); if (fileRef.current) fileRef.current.value = ''; }}
                       className="text-xs px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300">
                       別画像
                     </button>
@@ -445,13 +459,40 @@ export default function ImageImportDialog({ onClose, onApply }) {
 
           {/* 認識結果プレビュー（クリックで駒修正） */}
           {editedBoard && result && (
-            <BoardEditor
-              board={editedBoard}
-              hands={result.hands}
-              editingCell={editingCell}
-              onCellClick={handleCellClick}
-              onSetPiece={handleSetPiece}
-            />
+            <>
+              <BoardEditor
+                board={editedBoard}
+                editingCell={editingCell}
+                onCellClick={handleCellClick}
+                onSetPiece={handleSetPiece}
+              />
+              {(handPreviews.sente || handPreviews.gote) && (
+                <div className="bg-gray-800 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-2 font-semibold">持ち駒スキャンエリア — 緑枠が検出された駒</p>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { label: '△ 後手持ち駒エリア（盤面より上）', src: handPreviews.gote },
+                      { label: '▲ 先手持ち駒エリア（盤面より下）', src: handPreviews.sente },
+                    ].map(({ label, src }) => src && (
+                      <div key={label}>
+                        <p className="text-xs text-gray-500 mb-1">{label}</p>
+                        <img src={src} alt={label} className="w-full rounded border border-gray-600" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {scanWarnings.length > 0 && (
+                <div className="bg-yellow-900/40 border border-yellow-600/50 rounded-xl px-3 py-2 flex flex-col gap-1">
+                  {scanWarnings.map((w, i) => (
+                    <p key={i} className="text-xs text-yellow-300 flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">⚠</span>{w}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <HandsEditor hands={editedHands} onChange={setEditedHands} />
+            </>
           )}
         </div>
 
@@ -473,14 +514,13 @@ export default function ImageImportDialog({ onClose, onApply }) {
 }
 
 // ── 認識結果エディタ ──────────────────────────────────────────────────
-function BoardEditor({ board, hands, editingCell, onCellClick, onSetPiece }) {
+function BoardEditor({ board, editingCell, onCellClick, onSetPiece }) {
   return (
     <div className="bg-gray-800 rounded-xl p-3">
       <p className="text-xs text-gray-400 mb-2 font-semibold">
         認識結果 — マスをクリックして駒を修正できます
       </p>
-      <HandRow player={2} hand={hands[2]} />
-      <div className="grid grid-cols-9 gap-px bg-gray-600 border border-gray-600 rounded my-1 relative">
+      <div className="grid grid-cols-9 gap-px bg-gray-600 border border-gray-600 rounded relative">
         {board.map((row, ri) => row.map((cell, ci) => {
           const isEditing = editingCell?.row === ri && editingCell?.col === ci;
           return (
@@ -503,7 +543,59 @@ function BoardEditor({ board, hands, editingCell, onCellClick, onSetPiece }) {
           );
         }))}
       </div>
-      <HandRow player={1} hand={hands[1]} />
+    </div>
+  );
+}
+
+// ── 駒台エディタ ─────────────────────────────────────────────────────
+function HandsEditor({ hands, onChange }) {
+  const adjust = (player, piece, delta) => {
+    const current = (hands[player][piece] || 0) + delta;
+    const clamped = Math.max(0, Math.min(HAND_PIECE_MAX[piece], current));
+    const newPlayerHand = { ...hands[player] };
+    if (clamped === 0) delete newPlayerHand[piece];
+    else newPlayerHand[piece] = clamped;
+    onChange({ ...hands, [player]: newPlayerHand });
+  };
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-3">
+      <p className="text-xs text-gray-400 mb-3 font-semibold">駒台（持ち駒）— 数字をタップして増減</p>
+      {[
+        { player: 2, label: '△ 後手の持ち駒' },
+        { player: 1, label: '▲ 先手の持ち駒' },
+      ].map(({ player, label }) => (
+        <div key={player} className="mb-3 last:mb-0">
+          <p className="text-xs text-gray-500 mb-1.5">{label}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {HAND_PIECE_TYPES.map(piece => {
+              const count = hands[player][piece] || 0;
+              return (
+                <div key={piece} className="flex items-center gap-0.5 bg-gray-700 rounded-lg px-1.5 py-1">
+                  <span className="text-xs text-gray-300 w-4 text-center font-bold">
+                    {PIECE_DISPLAY[piece]}
+                  </span>
+                  <button
+                    onClick={() => adjust(player, piece, -1)}
+                    disabled={count === 0}
+                    className="w-5 h-5 rounded text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center leading-none">
+                    −
+                  </button>
+                  <span className={`w-5 text-center text-sm font-bold ${count > 0 ? 'text-yellow-300' : 'text-gray-500'}`}>
+                    {count}
+                  </span>
+                  <button
+                    onClick={() => adjust(player, piece, +1)}
+                    disabled={count >= HAND_PIECE_MAX[piece]}
+                    className="w-5 h-5 rounded text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center leading-none">
+                    ＋
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -539,18 +631,3 @@ function PiecePicker({ row, col, currentCell, onSetPiece }) {
   );
 }
 
-function HandRow({ player, hand }) {
-  const pieces = HAND_PIECE_TYPES.filter(t => hand?.[t] > 0);
-  return (
-    <div className={`flex items-center gap-1 text-xs py-1 ${player === 2 ? 'flex-row-reverse' : ''}`}>
-      <span className="text-gray-400 shrink-0">{player === 1 ? '▲持駒:' : '△持駒:'}</span>
-      {pieces.length === 0
-        ? <span className="text-gray-500">なし</span>
-        : pieces.map(t => (
-            <span key={t} className="bg-gray-700 rounded px-1.5 py-0.5 text-white font-bold">
-              {PIECE_DISPLAY[t]}{hand[t] > 1 ? hand[t] : ''}
-            </span>
-          ))}
-    </div>
-  );
-}

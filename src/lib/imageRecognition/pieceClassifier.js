@@ -22,23 +22,35 @@ export async function loadModel() {
 }
 
 /**
- * 81マスを一括バッチ推論する。
- * cells: HTMLCanvasElement[81]  (row-major)
- * 戻り値: {type, player, promoted}[] 長さ81 (null = 空マス)
+ * セルを一括バッチ推論する。
+ * cells: HTMLCanvasElement[]
+ * 戻り値: {type, player, promoted, confidence, emptyProb, top2Margin}[] (null = 空マス)
+ *   confidence  : softmax 最大値 (確信度)
+ *   emptyProb   : 空マスクラスの softmax 値
+ *   top2Margin  : 1位-2位 の差 (小さいほど判定が曖昧)
  */
 export async function classifyBatch(model, cells) {
   return tf.tidy(() => {
     const tensors = cells.map(c => _cellToTensor(c));
-    const batch = tf.stack(tensors); // [81, 64, 64, 1]
-    const preds = model.predict(batch);
-    const classIdxs = preds.argMax(1).arraySync();
+    const batch = tf.stack(tensors);          // [N, 64, 64, 1]
+    const preds  = model.predict(batch);       // [N, 29]
+    const probs  = tf.softmax(preds);          // [N, 29]
 
-    return classIdxs.map(idx => {
+    const classIdxs = probs.argMax(1).arraySync(); // [N]
+    const probsData = probs.arraySync();            // [N, 29]
+
+    return classIdxs.map((idx, i) => {
+      const p = probsData[i];
+      const confidence = p[idx];
+      const emptyProb  = p[EMPTY_CLASS];
+      const sorted2    = p.slice().sort((a, b) => b - a);
+      const top2Margin = sorted2[0] - sorted2[1];
+
       if (idx === EMPTY_CLASS) return null;
-      const player = idx < NUM_LABELS ? 1 : 2;
+      const player   = idx < NUM_LABELS ? 1 : 2;
       const labelIdx = idx < NUM_LABELS ? idx : idx - NUM_LABELS;
-      const type = LABEL_TO_PIECE[labelIdx];
-      return { type, player, promoted: type.startsWith('+') };
+      const type     = LABEL_TO_PIECE[labelIdx];
+      return { type, player, promoted: type.startsWith('+'), confidence, emptyProb, top2Margin };
     });
   });
 }
