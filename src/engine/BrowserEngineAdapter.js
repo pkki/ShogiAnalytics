@@ -32,18 +32,25 @@ function getIOSMajorVersion() {
 
 /**
  * WASM pthreads (ネストワーカー) が動作するか判定。
- *   - SharedArrayBuffer 必須 (COOP/COEP が設定済みの前提)
- *   - iOS 15 以前はネストワーカー (Worker-in-Worker) 非対応のため WASM エンジンが起動しない
- *   - iOS 16 以降は対応済みなのですべてのエンジンが利用可能
+ *
+ * iOS の場合はバージョンのみでゲートする:
+ *   - iOS 15 以前: ネストワーカー非対応 → false
+ *   - iOS 16 以降: true (SharedArrayBuffer の有無は問わない)
+ *     iOS 26 以降では COEP 挙動変更により SharedArrayBuffer が undefined に見える
+ *     場合があるが実際には WASM が動作するため SAB チェックをスキップする。
+ *     WASM 起動失敗時は既存のエラーハンドラが Alpha-Beta へ自動切替する。
+ *
+ * 非iOS の場合は SharedArrayBuffer / Atomics の存在で判定する。
  */
 export function supportsWasmEngine() {
-  if (typeof SharedArrayBuffer === 'undefined' || typeof Atomics === 'undefined') return false;
   if (isIOSDevice()) {
     const v = getIOSMajorVersion();
-    // iOS バージョンを確定できない場合 (iPad Pro desktop UA 等) は iOS 16+ と仮定して許可
+    // バージョン不明 (iPad Pro desktop UA 等) は iOS 16+ と仮定して許可
     if (v !== null && v < 16) return false;
+    return true;
   }
-  return true;
+  // 非iOS: COOP/COEP が設定されていれば SharedArrayBuffer が利用可能
+  return typeof SharedArrayBuffer !== 'undefined' && typeof Atomics !== 'undefined';
 }
 
 // ── エンジン種別 ─────────────────────────────────────────────
