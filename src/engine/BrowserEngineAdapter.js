@@ -14,11 +14,43 @@ export const BROWSER_AGENT_INFO = {
   engineName: 'Built-in (Browser)',
 };
 
-// エンジン種別
+// ── プラットフォーム検出 ─────────────────────────────────────
+
+function isIOSDevice() {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPad Pro (iPadOS 13+) はデスクトップ UA のため userAgent に iPad が含まれない
+  return /Mac/.test(navigator.platform) &&
+         typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+}
+
+function getIOSMajorVersion() {
+  // "CPU OS 16_4" や "CPU iPhone OS 17_0" 形式
+  const m = navigator.userAgent.match(/OS (\d+)[_\.]/i);
+  return m ? parseInt(m[1]) : null; // null = 判定不能 (iPad Pro desktop UA 等)
+}
+
+/**
+ * WASM pthreads (ネストワーカー) が動作するか判定。
+ *   - SharedArrayBuffer 必須 (COOP/COEP が設定済みの前提)
+ *   - iOS 15 以前はネストワーカー (Worker-in-Worker) 非対応のため WASM エンジンが起動しない
+ *   - iOS 16 以降は対応済みなのですべてのエンジンが利用可能
+ */
+export function supportsWasmEngine() {
+  if (typeof SharedArrayBuffer === 'undefined' || typeof Atomics === 'undefined') return false;
+  if (isIOSDevice()) {
+    const v = getIOSMajorVersion();
+    // iOS バージョンを確定できない場合 (iPad Pro desktop UA 等) は iOS 16+ と仮定して許可
+    if (v !== null && v < 16) return false;
+  }
+  return true;
+}
+
+// ── エンジン種別 ─────────────────────────────────────────────
 const ENGINE_TYPES = {
   ALPHA_BETA:    'Alpha-Beta (軽量)',
-  SUISHO_PETITE: 'SuishoPetite (NNUE)※iOS非対応',
-  SUISHO5:       'Suisho5 (強力NNUE)※iOS非対応',
+  SUISHO_PETITE: 'SuishoPetite (NNUE)',
+  SUISHO5:       'Suisho5 (強力NNUE)',
 };
 const VARIANT_OF = {
   [ENGINE_TYPES.SUISHO_PETITE]: 'suishopetite',
@@ -26,6 +58,10 @@ const VARIANT_OF = {
 };
 
 function makeBrowserEngineOptions(multiPV, engineType, suisho5Ready, petiteReady, suisho5CacheBytes) {
+  const wasmOk       = supportsWasmEngine();
+  const availableEngines = wasmOk ? Object.values(ENGINE_TYPES) : [ENGINE_TYPES.ALPHA_BETA];
+  const defaultEngine    = wasmOk ? ENGINE_TYPES.SUISHO_PETITE  : ENGINE_TYPES.ALPHA_BETA;
+
   const opts = [
     {
       name:    'MultiPV',
@@ -36,8 +72,8 @@ function makeBrowserEngineOptions(multiPV, engineType, suisho5Ready, petiteReady
     {
       name:    'エンジン',
       type:    'combo',
-      vars:    Object.values(ENGINE_TYPES),
-      default: ENGINE_TYPES.SUISHO_PETITE,
+      vars:    availableEngines,
+      default: defaultEngine,
       value:   engineType,
     },
   ];
@@ -75,7 +111,7 @@ export function createBrowserEngineAdapter() {
   let abWorker   = null;   // alpha-beta worker
   let wasmWorker = null;   // YaneuraOu WASM worker
   let multiPV    = 1;
-  let engineType = ENGINE_TYPES.SUISHO_PETITE;
+  let engineType = supportsWasmEngine() ? ENGINE_TYPES.SUISHO_PETITE : ENGINE_TYPES.ALPHA_BETA;
   let analyzing  = false;
   let aiMode     = false;
   let autoAbort  = false;
@@ -319,6 +355,16 @@ export function createBrowserEngineAdapter() {
   // ── 初期化 ────────────────────────────────────────────────
   function init() {
     startABWorker();
+
+    // iOS 15 以前などの WASM 非対応環境は Alpha-Beta のみで即スタンバイ
+    if (!supportsWasmEngine()) {
+      setTimeout(() => {
+        fireOptions();
+        fire('engine:status', { status: 'standby', message: '' });
+      }, 100);
+      return;
+    }
+
     // WASM エンジンのキャッシュ状態を非同期で確認
     Promise.all([
       isEngineReady('suishopetite'),
