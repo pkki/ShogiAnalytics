@@ -896,7 +896,7 @@ export default function TsumePage() {
                 </button>
                 {!myToken && (
                   <p className="text-xs text-gray-600 ml-1">
-                    <Link to="/login" className="text-blue-500 hover:text-blue-400">ログイン</Link>
+                    <Link to="/login" reloadDocument className="text-blue-500 hover:text-blue-400">ログイン</Link>
                     して評価できます
                   </p>
                 )}

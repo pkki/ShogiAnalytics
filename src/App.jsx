@@ -2138,8 +2138,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   // ログアウト
   function handleLogout() {
     localStorage.removeItem('shogi_jwt');
-    setAuthToken('');
-    setUserSettings({});
+    window.location.replace('/login'); // フルリロードで COOP をリセット
   }
 
   // ユーザー設定をサーバーに保存
@@ -2913,9 +2912,10 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     </>
   );
 
-  // 未ログイン → ログインページへリダイレクト
+  // 未ログイン → ログインページへリダイレクト (フルリロードで COOP ヘッダーをリセット)
   if (!authToken) {
-    return <Navigate to="/login" replace />;
+    window.location.replace('/login');
+    return null;
   }
 
   return (

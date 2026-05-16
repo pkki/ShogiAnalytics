@@ -102,10 +102,11 @@ export default function LoginPage({ onSuccess }) {
       const res = await apiPost('/auth/google', { idToken: credential });
       localStorage.setItem('shogi_jwt', res.token);
       onSuccess?.(res.token);
-      navigate('/app');
+      window.location.href = '/app'; // フルリロードで COOP: same-origin を取得
     } catch (err) {
       setError(err.message);
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }
 
   const hasTurnstile = !!import.meta.env.VITE_TURNSTILE_SITE_KEY;
@@ -120,7 +121,7 @@ export default function LoginPage({ onSuccess }) {
       const res = await apiPost('/auth/login', { email, password, turnstileToken: tsToken });
       localStorage.setItem('shogi_jwt', res.token);
       onSuccess?.(res.token);
-      navigate('/app');
+      window.location.href = '/app';
     } catch (err) {
       if (err.message.includes('認証が完了していません')) {
         setPendingEmail(email);
