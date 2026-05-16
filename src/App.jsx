@@ -964,6 +964,7 @@ export default function App() {
     if (import.meta.env.VITE_USE_WEBRTC !== 'true') return '__local__';
     return localStorage.getItem('shogi_jwt') || '';
   });
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 起動時トークン検証: 期限切れなら削除、7日以内に期限切れなら自動リフレッシュ
   useEffect(() => {
@@ -1018,14 +1019,23 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // ログイン状態になったらサーバーからユーザー設定を取得
+  // ログイン状態になったらサーバーからユーザー設定・管理者フラグを取得
   useEffect(() => {
-    if (!authToken || authToken === '__local__') return;
+    if (!authToken || authToken === '__local__') {
+      setIsAdmin(false);
+      return;
+    }
     fetch(`${CLOUD_API}/api/settings`, {
       headers: { Authorization: `Bearer ${authToken}` },
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.ok) setUserSettings(data.settings ?? {}); })
+      .catch(() => {});
+    fetch(`${CLOUD_API}/auth/me`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setIsAdmin(data?.isAdmin === true); })
       .catch(() => {});
   }, [authToken]);
 
@@ -3349,7 +3359,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
           <div className="flex items-center gap-2">
             {import.meta.env.VITE_USE_WEBRTC !== 'true' && (engineBadge || engineRestartBtn)}
             {userEmail
-              ? <AccountMenu email={userEmail} userId={userId} onLogout={handleLogout}
+              ? <AccountMenu email={userEmail} userId={userId} isAdmin={isAdmin} onLogout={handleLogout}
                   onShowSettings={() => setShowAccountSettings(true)}
                   onShowShares={async () => {
                     setShowShares(true);

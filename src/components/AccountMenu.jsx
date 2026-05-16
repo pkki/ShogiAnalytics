@@ -10,13 +10,10 @@ import { Smartphone, Settings, Info, User, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ANDROID_DOWNLOAD_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL || '';
-const ADMIN_USER_IDS = new Set(
-  (import.meta.env.VITE_ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
-);
 // Capacitor ネイティブ環境 (Android アプリ内) では表示しない
 const isNative = !!(window.Capacitor?.isNativePlatform?.());
 
-export default function AccountMenu({ email, userId, onLogout, onShowShares, onShowSettings, onShowContact }) {
+export default function AccountMenu({ email, userId, isAdmin, onLogout, onShowShares, onShowSettings, onShowContact }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const { t } = useTranslation();
@@ -31,9 +28,8 @@ export default function AccountMenu({ email, userId, onLogout, onShowShares, onS
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
-  const initial  = email?.[0]?.toUpperCase() || '?';
-  const short    = email?.split('@')[0] || '';
-  const isAdmin  = userId && ADMIN_USER_IDS.has(userId);
+  const initial = email?.[0]?.toUpperCase() || '?';
+  const short   = email?.split('@')[0] || '';
 
   return (
     <div className="relative" ref={ref}>
