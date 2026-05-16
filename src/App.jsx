@@ -978,8 +978,10 @@ export default function App() {
         setAuthToken('');
         return;
       }
-      // 7日以内に期限切れ → 自動リフレッシュ
-      if (payload.exp && payload.exp - now < 7 * 24 * 3600) {
+      // 残り2時間以内に期限切れ → 自動リフレッシュ
+      // 注意: setAuthToken を呼ぶとソケット再接続が発生するため、
+      // localStorage のみ更新して次回の自然な再接続時に新トークンを使用させる
+      if (payload.exp && payload.exp - now < 2 * 3600) {
         fetch(`${CLOUD_API}/auth/refresh`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -988,7 +990,8 @@ export default function App() {
           .then(data => {
             if (data?.token) {
               localStorage.setItem('shogi_jwt', data.token);
-              setAuthToken(data.token);
+              // setAuthToken は呼ばない — ソケット再接続を防ぐ
+              // 現在のソケットは旧トークンで既に接続済みのため続行可能
             }
           })
           .catch(() => {});

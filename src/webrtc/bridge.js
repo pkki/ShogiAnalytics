@@ -404,6 +404,7 @@ export function createWebSocketRelaySocket(token) {
         sigSk?.emit('take_over');
         return socket;
       }
+      if (isPassive) return socket; // 別デバイスがアクティブ中はコマンドを転送しない
       sigSk?.emit('relay', { agentId: selectedAgentId, event, data });
       return socket;
     },
@@ -439,6 +440,12 @@ export function createWebSocketRelaySocket(token) {
   });
 
   sigSk.on('another_device_active', () => {
+    if (manuallyDisplaced) {
+      // 別デバイスに手動で引き継がれた後は自動 take_over しない (パッシブのまま)
+      console.log('[relay] another_device_active → stay passive (manually displaced)');
+      isPassive = true;
+      return;
+    }
     // リレーモードでは WebRTC bridge の旧シグナリング接続が残っていることが多い（同一デバイスの接続切替）
     // → 自動引き継ぎしてアクティブ化する
     console.log('[relay] another_device_active → auto take_over (own previous session)');
