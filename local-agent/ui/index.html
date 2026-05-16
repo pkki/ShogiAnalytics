@@ -344,6 +344,21 @@ function sendEngine(cmd) { window.api.engineSend(cmd); }
 function emitToClient(event, data) {
   if (dc && dc.readyState === 'open') {
     try { dc.send(JSON.stringify({ event, data })); } catch (_) {}
+  } else if (sigSocket?.connected) {
+    sigSocket.emit('relay', { event, data });
+  }
+}
+
+function sendRelayStatus() {
+  emitToClient('engine:options', engineOptions);
+  if (!engineReady) {
+    emitToClient('engine:status', { status: 'standby', message: 'スタンバイ中' });
+  } else if (autoState === 'running') {
+    emitToClient('engine:status', { status: 'thinking', message: '棋譜解析中…' });
+  } else if (isThinking) {
+    emitToClient('engine:status', { status: 'thinking' });
+  } else {
+    emitToClient('engine:status', { status: 'ready', message: 'エンジン準備完了' });
   }
 }
 
@@ -689,6 +704,9 @@ function handleClientEvent(event, data) {
       if (autoState === 'running') { autoState = 'stopping'; sendEngine('stop'); }
       else if (autoState === 'idle') pendingAutoAnalysis = null;
       break;
+    case 'request_status':
+      sendRelayStatus();
+      break;
     default:
       logWarn('DC', `不明なイベント: ${event}`);
   }
@@ -702,7 +720,7 @@ window.api.onEngineExit(code => {
   engineReady = false; isThinking = false; aiThinkMode = false; tsumeMode = false;
   setStatus('eng', 'red', `終了 (code=${code})`);
   emitToClient('engine:status', { status: 'error', message: `エンジン終了 (code ${code})` });
-  if (dc && dc.readyState === 'open') {
+  if ((dc && dc.readyState === 'open') || sigSocket?.connected) {
     restartTimer = setTimeout(() => startEngineProc(), 2000);
   }
 });
@@ -804,15 +822,23 @@ function connectSignaling() {
     closePcDc();
   });
 
-  // フロントエンドが接続 → WebRTC を準備
+  // フロントエンドが接続 → WebRTC を準備、またはリレーモードで現在状態を送信
   sigSocket.on('peer-joined', ({ role }) => {
     logInfo('Sig', `peer joined: role=${role}`);
-    if (role === 'frontend') setupWebRTC();
+    if (role === 'frontend') {
+      setupWebRTC();
+      sendRelayStatus(); // WebSocket リレーモード: 現在のエンジン状態をフロントに送信
+    }
   });
 
   sigSocket.on('peer-left', ({ role }) => {
     logWarn('Sig', `peer left: role=${role}`);
     if (role === 'frontend') closePcDc();
+  });
+
+  // WebSocket リレーモード: フロントエンドからのコマンドを受信
+  sigSocket.on('relay', ({ event, data }) => {
+    handleClientEvent(event, data);
   });
 
   // SDP offer を受信
@@ -1155,6 +1181,35 @@ setStatus = function(id, color, text) {
     
   }
 })();
+
+// ── アップデート通知 ─────────────────────────────────────────
+window.api.onUpdateAvailable(({ version, releaseUrl }) => {
+  const overlay = document.getElementById('update-overlay');
+  document.getElementById('update-version').textContent = version;
+  overlay.style.display = 'flex';
+  document.getElementById('update-download-btn').onclick = () => {
+    window.api.openExternal(releaseUrl);
+  };
+  document.getElementById('update-close-btn').onclick = () => {
+    overlay.style.display = 'none';
+  };
+});
 </script>
+
+<!-- アップデート通知ポップアップ -->
+<div id="update-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#1e293b; border:1px solid #f59e0b; border-radius:12px; padding:24px; max-width:360px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+      <span style="font-size:22px;">🎉</span>
+      <span style="color:#f1f5f9; font-size:16px; font-weight:700;">アップデートがあります</span>
+    </div>
+    <p style="color:#94a3b8; font-size:13px; margin:0 0 6px;">新しいバージョンが利用可能です：</p>
+    <p id="update-version" style="color:#f59e0b; font-size:20px; font-weight:700; margin:0 0 20px; letter-spacing:1px;"></p>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button id="update-close-btn" style="padding:8px 16px; border-radius:7px; border:1px solid #475569; background:transparent; color:#94a3b8; cursor:pointer; font-size:13px;">あとで</button>
+      <button id="update-download-btn" style="padding:8px 18px; border-radius:7px; border:none; background:#f59e0b; color:#000; cursor:pointer; font-size:13px; font-weight:700;">ダウンロード</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

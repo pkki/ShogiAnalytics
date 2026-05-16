@@ -9,6 +9,7 @@ const path  = require('path');
 const fs    = require('fs');
 const cp    = require('child_process');
 const rl    = require('readline');
+const https = require('https');
 
 // ── パス ──────────────────────────────────────────────────
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
@@ -195,6 +196,50 @@ ipcMain.handle('engine:save-options', (_e, cfg) => {
   return true;
 });
 
+// ── アップデートチェック ───────────────────────────────────
+const GITHUB_REPO = 'pkki/ShogiAnalytics';
+
+function compareVersions(a, b) {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0) ? 1 : -1;
+  }
+  return 0;
+}
+
+function checkForUpdates(serverUrl) {
+  if (!serverUrl || serverUrl.includes('localhost')) return; // 開発環境はスキップ
+
+  const options = {
+    hostname: 'api.github.com',
+    path:     `/repos/${GITHUB_REPO}/releases/latest`,
+    headers:  { 'User-Agent': 'ShogiAgent' },
+    timeout:  8000,
+  };
+
+  https.get(options, (res) => {
+    let raw = '';
+    res.on('data', (chunk) => { raw += chunk; });
+    res.on('end', () => {
+      try {
+        const release = JSON.parse(raw);
+        const latestTag = release.tag_name;
+        if (!latestTag) return;
+        if (compareVersions(latestTag, app.getVersion()) > 0) {
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('update:available', {
+              version:    latestTag,
+              releaseUrl: release.html_url,
+              body:       release.body || '',
+            });
+          }
+        }
+      } catch (_) {}
+    });
+  }).on('error', () => {}).on('timeout', function() { this.destroy(); });
+}
+
 // ── シングルインスタンス ───────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -213,6 +258,11 @@ if (!gotLock) {
   app.whenReady().then(() => {
     createWindow();
     createTray();
+    // ウィンドウ表示後にアップデートチェック (設定読み込み後)
+    win.webContents.once('did-finish-load', () => {
+      const cfg = loadConfig();
+      checkForUpdates(cfg.serverUrl);
+    });
   });
 
   app.on('window-all-closed', (e) => e.preventDefault()); // トレイに残す

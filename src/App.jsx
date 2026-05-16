@@ -1057,6 +1057,7 @@ export default function App() {
   const [webrtcNotSupported] = useState(
     () => import.meta.env.VITE_USE_WEBRTC === 'true' && !isWebRTCAvailable()
   );
+  const [webrtcNoticeDismissed, setWebrtcNoticeDismissed] = useState(false);
   const [useWebSocketFallback, setUseWebSocketFallback] = useState(false);
   // 棋譜共有
   const [shareUrl, setShareUrl]         = useState(null);
@@ -3234,16 +3235,22 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       )}
 
       {/* ── WebRTC 未対応通知バナー（ブラウザが RTCPeerConnection 非サポートの場合）── */}
-      {webrtcNotSupported && (
+      {webrtcNotSupported && !webrtcNoticeDismissed && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] w-full max-w-sm px-4">
           <div className="bg-yellow-900/90 border border-yellow-500/50 rounded-xl shadow-xl px-4 py-3 flex items-start gap-3">
             <span className="text-yellow-400 text-lg leading-none shrink-0 mt-0.5">⚠</span>
-            <div className="text-sm">
+            <div className="text-sm flex-1">
               <p className="text-yellow-100 font-semibold">WebRTCが使用できません</p>
               <p className="text-yellow-300/80 mt-0.5">
                 このブラウザでは WebRTC に対応していないため、WebSocket（サーバー経由）で接続します。
               </p>
             </div>
+            <button
+              onClick={() => setWebrtcNoticeDismissed(true)}
+              className="text-yellow-400/70 hover:text-yellow-200 shrink-0 leading-none mt-0.5"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

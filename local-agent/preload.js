@@ -17,7 +17,8 @@ window.api = {
   openExternal:    (url) => ipcRenderer.invoke('shell:open-external', url),
 
   // エンジン出力イベント (main → renderer)
-  onEngineLine:    (fn)  => ipcRenderer.on('engine:line',  (_e, v) => fn(v)),
-  onEngineExit:    (fn)  => ipcRenderer.on('engine:exit',  (_e, v) => fn(v)),
-  onEngineError:   (fn)  => ipcRenderer.on('engine:error', (_e, v) => fn(v)),
+  onEngineLine:       (fn) => ipcRenderer.on('engine:line',       (_e, v) => fn(v)),
+  onEngineExit:       (fn) => ipcRenderer.on('engine:exit',       (_e, v) => fn(v)),
+  onEngineError:      (fn) => ipcRenderer.on('engine:error',      (_e, v) => fn(v)),
+  onUpdateAvailable:  (fn) => ipcRenderer.on('update:available',  (_e, v) => fn(v)),
 };

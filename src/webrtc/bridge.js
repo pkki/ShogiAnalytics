@@ -465,12 +465,16 @@ export function createWebSocketRelaySocket(token) {
   });
 
   sigSk.on('agent-connected', (agentInfo) => {
+    console.log('[relay] agent-connected:', agentInfo.agentId, '| isPassive:', isPassive, '| selectedAgentId:', selectedAgentId);
     fire('agent:connected', agentInfo);
     if (!isPassive && !selectedAgentId) {
       selectedAgentId = agentInfo.agentId;
+      console.log('[relay] → agent:selected, sending request_status');
       fire('agent:selected', agentInfo);
       // 接続直後にエンジン現在状態を要求 (WebRTC の channel.onOpen 相当)
       sigSk.emit('relay', { agentId: agentInfo.agentId, event: 'request_status', data: {} });
+    } else {
+      console.log('[relay] agent-connected: skip select (isPassive=' + isPassive + ', selectedAgentId=' + selectedAgentId + ')');
     }
   });
 
@@ -484,7 +488,10 @@ export function createWebSocketRelaySocket(token) {
   });
 
   // エンジンイベントをサーバー経由でリレー受信
-  sigSk.on('relay', ({ event, data }) => fire(event, data));
+  sigSk.on('relay', ({ event, data }) => {
+    console.log('[relay] ← received event:', event);
+    fire(event, data);
+  });
 
   return socket;
 }
