@@ -6,10 +6,13 @@
 // ============================================================
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Smartphone, Settings, Info, User } from 'lucide-react';
+import { Smartphone, Settings, Info, User, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ANDROID_DOWNLOAD_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL || '';
+const ADMIN_USER_IDS = new Set(
+  (import.meta.env.VITE_ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+);
 // Capacitor ネイティブ環境 (Android アプリ内) では表示しない
 const isNative = !!(window.Capacitor?.isNativePlatform?.());
 
@@ -28,8 +31,9 @@ export default function AccountMenu({ email, userId, onLogout, onShowShares, onS
     return () => document.removeEventListener('mousedown', handle);
   }, [open]);
 
-  const initial = email?.[0]?.toUpperCase() || '?';
-  const short   = email?.split('@')[0] || '';
+  const initial  = email?.[0]?.toUpperCase() || '?';
+  const short    = email?.split('@')[0] || '';
+  const isAdmin  = userId && ADMIN_USER_IDS.has(userId);
 
   return (
     <div className="relative" ref={ref}>
@@ -65,6 +69,17 @@ export default function AccountMenu({ email, userId, onLogout, onShowShares, onS
               >
                 <User size={13} className="text-gray-400" />
                 {t('accountMenu.myProfile')}
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="w-full text-left px-3 py-2 rounded hover:bg-gray-800
+                           text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-2"
+              >
+                <ShieldCheck size={13} className="text-purple-500" />
+                管理者ダッシュボード
               </Link>
             )}
             {onShowSettings && (
