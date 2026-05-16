@@ -263,25 +263,31 @@ export function createBrowserEngineAdapter() {
       }
 
       if (d.type === 'error') {
-        // WASMエラー時はAlpha-Betaにフォールバック
         wasmEngineReady = false;
         engineType = ENGINE_TYPES.ALPHA_BETA;
         if (wasmWorker) { wasmWorker.terminate(); wasmWorker = null; }
         fireOptions();
-        fire('engine:status', { status: 'error', message: `${d.message} (Alpha-Betaで継続)` });
-        setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
+        const onIOS = isIOSDevice();
+        fire('engine:status', {
+          status: onIOS ? 'standby' : 'error',
+          message: onIOS ? '' : `${d.message} (Alpha-Betaで継続)`,
+        });
+        if (!onIOS) setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
         return;
       }
     };
 
     wasmWorker.onerror = (e) => {
-      // WASMワーカークラッシュ時もAlpha-Betaにフォールバック
       wasmEngineReady = false;
       engineType = ENGINE_TYPES.ALPHA_BETA;
       if (wasmWorker) { wasmWorker.terminate(); wasmWorker = null; }
       fireOptions();
-      fire('engine:status', { status: 'error', message: `WASMエラー: ${e.message} (Alpha-Betaで継続)` });
-      setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
+      const onIOS = isIOSDevice();
+      fire('engine:status', {
+        status: onIOS ? 'standby' : 'error',
+        message: onIOS ? '' : `WASMエラー: ${e.message} (Alpha-Betaで継続)`,
+      });
+      if (!onIOS) setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
     };
 
     wasmWorker.postMessage({ cmd: 'load', variant });

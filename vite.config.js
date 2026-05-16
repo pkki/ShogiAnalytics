@@ -22,6 +22,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/opencv/**'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         name: '将棋アナリティクス',
@@ -39,24 +47,6 @@ export default defineConfig({
           {
             src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png',
             purpose: 'any maskable',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        globIgnores: ['**/opencv/**'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB
-        navigateFallback: '/index.html',
-        // API・Socket.io はキャッシュせず常にネットワーク経由
-        // /login はサーバー側で COOP ヘッダーを除外しているが SW のキャッシュが上書きするため除外
-        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/socket\.io/, /^\/login/, /^\/admin/],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) =>
-              url.pathname.startsWith('/api') ||
-              url.pathname.startsWith('/auth') ||
-              url.pathname.startsWith('/socket.io'),
-            handler: 'NetworkOnly',
           },
         ],
       },
