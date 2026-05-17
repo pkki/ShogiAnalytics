@@ -219,6 +219,13 @@ async function loadEngine(variant) {
 
   console.log(`[YaneuraOu] loadEngine(${variant}) 開始`);
 
+  // pthreads WASM には SharedArrayBuffer が必須。
+  // COOP/COEP ヘッダーが機能していない環境（一部 iOS 等）では利用不可のため即時エラーを返す。
+  if (typeof SharedArrayBuffer === 'undefined') {
+    self.postMessage({ type: 'error', message: 'SharedArrayBuffer が利用できません。HTTPS + COOP/COEP ヘッダーが必要です。' });
+    return;
+  }
+
   let files = await getEngineFiles(variant);
   console.log(`[YaneuraOu] キャッシュ確認: ${files ? 'ヒット' : 'ミス'}`);
   if (!files) {

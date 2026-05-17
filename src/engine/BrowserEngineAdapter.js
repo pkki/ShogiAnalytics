@@ -33,20 +33,20 @@ function getIOSMajorVersion() {
 /**
  * WASM pthreads (ネストワーカー) が動作するか判定。
  *
- * iOS の場合はバージョンのみでゲートする:
+ * iOS の場合:
  *   - iOS 15 以前: ネストワーカー非対応 → false
- *   - iOS 16 以降: true (SharedArrayBuffer の有無は問わない)
- *     iOS 26 以降では COEP 挙動変更により SharedArrayBuffer が undefined に見える
- *     場合があるが実際には WASM が動作するため SAB チェックをスキップする。
- *     WASM 起動失敗時は既存のエラーハンドラが Alpha-Beta へ自動切替する。
+ *   - iOS 16 以降: crossOriginIsolated が true の場合のみ許可
+ *     crossOriginIsolated が false = COEP が機能していないため SAB は使用不可
  *
  * 非iOS の場合は SharedArrayBuffer / Atomics の存在で判定する。
  */
 export function supportsWasmEngine() {
   if (isIOSDevice()) {
     const v = getIOSMajorVersion();
-    // バージョン不明 (iPad Pro desktop UA 等) は iOS 16+ と仮定して許可
+    // iOS 15 以前はネストワーカー非対応
     if (v !== null && v < 16) return false;
+    // COEP が機能していない場合 (crossOriginIsolated === false) は SAB 使用不可
+    if (typeof self !== 'undefined' && typeof self.crossOriginIsolated === 'boolean' && !self.crossOriginIsolated) return false;
     return true;
   }
   // 非iOS: COOP/COEP が設定されていれば SharedArrayBuffer が利用可能
@@ -267,12 +267,11 @@ export function createBrowserEngineAdapter() {
         engineType = ENGINE_TYPES.ALPHA_BETA;
         if (wasmWorker) { wasmWorker.terminate(); wasmWorker = null; }
         fireOptions();
-        const onIOS = isIOSDevice();
-        fire('engine:status', {
-          status: onIOS ? 'standby' : 'error',
-          message: onIOS ? '' : `${d.message} (Alpha-Betaで継続)`,
-        });
-        if (!onIOS) setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
+        const msg = isIOSDevice()
+          ? 'このiOS環境ではWASMエンジンを使用できません。Alpha-Betaに切り替えました。'
+          : `${d.message} (Alpha-Betaで継続)`;
+        fire('engine:status', { status: 'error', message: msg });
+        setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
         return;
       }
     };
@@ -282,12 +281,11 @@ export function createBrowserEngineAdapter() {
       engineType = ENGINE_TYPES.ALPHA_BETA;
       if (wasmWorker) { wasmWorker.terminate(); wasmWorker = null; }
       fireOptions();
-      const onIOS = isIOSDevice();
-      fire('engine:status', {
-        status: onIOS ? 'standby' : 'error',
-        message: onIOS ? '' : `WASMエラー: ${e.message} (Alpha-Betaで継続)`,
-      });
-      if (!onIOS) setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
+      const msg = isIOSDevice()
+        ? 'このiOS環境ではWASMエンジンを使用できません。Alpha-Betaに切り替えました。'
+        : `WASMエラー: ${e.message} (Alpha-Betaで継続)`;
+      fire('engine:status', { status: 'error', message: msg });
+      setTimeout(() => fire('engine:status', { status: 'standby', message: '' }), 3000);
     };
 
     wasmWorker.postMessage({ cmd: 'load', variant });

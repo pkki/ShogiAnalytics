@@ -116,23 +116,26 @@ export default function OnlineLobbyPage() {
   const userEmail = me?.email ?? '';
 
   // ─── サーバーデータ ────────────────────────────────────────
-  const [myRating,    setMyRating]    = useState(1500);
-  const [myGames,     setMyGames]     = useState(0);
-  const [isAdmin,     setIsAdmin]     = useState(false);
-  const [waitList,    setWaitList]    = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [history,     setHistory]     = useState([]);
+  const [myRating,       setMyRating]       = useState(1500);
+  const [myGames,        setMyGames]        = useState(0);
+  const [isAdmin,        setIsAdmin]        = useState(false);
+  const [waitList,       setWaitList]       = useState([]);
+  const [leaderboard,    setLeaderboard]    = useState([]);
+  const [history,        setHistory]        = useState([]);
+  const [activeGamesList, setActiveGamesList] = useState([]);
 
   // ─── ロビー UI 状態 ────────────────────────────────────────
-  const [lobbyTab,       setLobbyTab]       = useState('quick');  // 'quick'|'wait'|'rank'|'history'
+  const [lobbyTab,       setLobbyTab]       = useState('quick');  // 'quick'|'wait'|'watch'|'rank'|'history'
   const [showWaitModal,  setShowWaitModal]  = useState(false);
   const [waitSettings,   setWaitSettings]   = useState({ timeControl: 600, byoyomi: 0, byoyomiSeconds: 30 });
   const [inWaitList,     setInWaitList]     = useState(false);
   const [quickMatchKey,  setQuickMatchKey]  = useState(null);  // null | 'q10s'|'q3m'|'q10m'
 
   // ─── 対局状態 ─────────────────────────────────────────────
-  const [view,          setView]          = useState('lobby');
+  const [view,          setView]          = useState('lobby');  // 'lobby'|'game'|'spectating'
   const [game,          setGame]          = useState(null);
+  const [spectateGame,  setSpectateGame]  = useState(null);
+  const [spectateOver,  setSpectateOver]  = useState(null);
   const [myColor,       setMyColor]       = useState(null);
   const [gameOver,      setGameOver]      = useState(null);
   const [oppReconnecting, setOppReconnecting] = useState(null);
@@ -146,18 +149,30 @@ export default function OnlineLobbyPage() {
 
   // ─── 将棋盤状態 (reducer) ─────────────────────────────────
   const [gs, dispatch] = useReducer(gameReducer, INIT_GAME_STATE);
+  const [gsSpec, dispatchSpec] = useReducer(gameReducer, INIT_GAME_STATE);
 
   // ─── タイマー ─────────────────────────────────────────────
   const clockRef = useRef({ sente:{main:600,byo:30,inByo:false}, gote:{main:600,byo:30,inByo:false} });
   const [clockDisp, setClockDisp] = useState(clockRef.current);
+  const clockSpecRef  = useRef({ sente:{main:600,byo:30,inByo:false}, gote:{main:600,byo:30,inByo:false} });
+  const [clockSpecDisp, setClockSpecDisp] = useState(clockSpecRef.current);
   const timerRef    = useRef(null);
 
   // ─── refs (socket callback内で最新状態参照用) ────────────
-  const myColorRef  = useRef(null);
-  const gameRef     = useRef(null);
-  const socketRef   = useRef(null);
-  const gsRef       = useRef(gs);
+  const myColorRef        = useRef(null);
+  const gameRef           = useRef(null);
+  const socketRef         = useRef(null);
+  const gsRef             = useRef(gs);
+  const moveAudioRef      = useRef(null);
+  useEffect(() => {
+    moveAudioRef.current = new Audio('/attack.mp3');
+    moveAudioRef.current.preload = 'auto';
+    moveAudioRef.current.volume = 0.3;
+  }, []);
+  const spectateMoveRef   = useRef(0);  // 観戦中の手数カウント
   useEffect(() => { gsRef.current = gs; }, [gs]);
+  const gsSpecRef = useRef(gsSpec);
+  useEffect(() => { gsSpecRef.current = gsSpec; }, [gsSpec]);
 
   // ─── 盤面エリア実寸計測 (ResizeObserver) ─────────────────
   const boardAreaRef = useRef(null);
@@ -257,6 +272,7 @@ export default function OnlineLobbyPage() {
     socket.on('opponent_move', ({ move }) => {
       const oppColorNum = myColorRef.current === 'sente' ? 2 : 1;
       dispatch({ type:'APPLY_MOVE', move, player: oppColorNum });
+      if (moveAudioRef.current) { moveAudioRef.current.currentTime = 0; moveAudioRef.current.play().catch(() => {}); }
       // 相手が指したら相手の秒読みリセット
       const oppRole = myColorRef.current === 'sente' ? 'gote' : 'sente';
       const g = gameRef.current;
@@ -303,6 +319,62 @@ export default function OnlineLobbyPage() {
     socket.on('random_queuing',   () => {});
     socket.on('random_cancelled', () => setQuickMatchKey(null));
     socket.on('challenge_failed', () => alert('相手がすでに対局を開始しました'));
+
+    socket.on('active_games', ({ list }) => setActiveGamesList(list || []));
+
+    socket.on('spectate_joined', (data) => {
+      setSpectateGame(data);
+      setSpectateOver(null);
+      dispatchSpec({ type: 'RESET' });
+      (data.moves ?? []).forEach((m, i) =>
+        dispatchSpec({ type: 'APPLY_MOVE', move: m, player: i % 2 === 0 ? 1 : 2 })
+      );
+      spectateMoveRef.current = data.moves?.length ?? 0;
+      const elapsed = Date.now() - (data.lastMoveAt ?? Date.now());
+      const sc = data.clock ?? {
+        sente: { main: (data.timeControl ?? 600) * 1000, byo: (data.byoyomiSeconds ?? 30) * 1000 },
+        gote:  { main: (data.timeControl ?? 600) * 1000, byo: (data.byoyomiSeconds ?? 30) * 1000 },
+      };
+      const toSec = (ms) => Math.round(ms / 1000);
+      const restoreSpec = (role) => {
+        const c = sc[role];
+        const active = data.currentPlayer === role;
+        let mainMs = c.main, byoMs = c.byo;
+        if (active) {
+          if (mainMs > 0) {
+            mainMs = Math.max(0, mainMs - elapsed);
+            if (mainMs === 0 && (data.byoyomi ?? 0) > 0)
+              byoMs = Math.max(0, byoMs - Math.max(0, elapsed - c.main));
+          } else if ((data.byoyomi ?? 0) > 0) {
+            byoMs = Math.max(0, byoMs - elapsed);
+          }
+        }
+        return { main: toSec(mainMs), byo: Math.max(0, toSec(byoMs)), inByo: mainMs === 0 && (data.byoyomi ?? 0) > 0 };
+      };
+      clockSpecRef.current = { sente: restoreSpec('sente'), gote: restoreSpec('gote') };
+      setClockSpecDisp({ ...clockSpecRef.current });
+      setView('spectating');
+    });
+
+    socket.on('spectate_move', ({ move, moveNumber, clock }) => {
+      const playerNum = moveNumber % 2 === 1 ? 1 : 2;
+      dispatchSpec({ type: 'APPLY_MOVE', move, player: playerNum });
+      if (moveAudioRef.current) { moveAudioRef.current.currentTime = 0; moveAudioRef.current.play().catch(() => {}); }
+      spectateMoveRef.current = moveNumber;
+      if (clock) {
+        const toSec = (ms) => Math.round(ms / 1000);
+        clockSpecRef.current = {
+          sente: { main: toSec(clock.sente.main), byo: Math.max(0, toSec(clock.sente.byo)), inByo: clock.sente.main === 0 && clock.sente.byo > 0 },
+          gote:  { main: toSec(clock.gote.main),  byo: Math.max(0, toSec(clock.gote.byo)),  inByo: clock.gote.main  === 0 && clock.gote.byo  > 0 },
+        };
+        setClockSpecDisp({ ...clockSpecRef.current });
+      }
+    });
+
+    socket.on('spectate_game_over', ({ winner, reason }) => {
+      setSpectateOver({ winner, reason });
+      clearInterval(timerRef.current);
+    });
 
     // game_restored が来なければ古いフラグを削除（対局期限切れ対策）
     let gameRestoredRef = false;
@@ -357,6 +429,29 @@ export default function OnlineLobbyPage() {
     return () => clearInterval(timerRef.current);
   }, [view, gameOver, gs.currentPlayer]); // eslint-disable-line
 
+  // ─── 観戦タイマー ─────────────────────────────────────────
+  useEffect(() => {
+    clearInterval(timerRef.current);
+    if (view !== 'spectating' || spectateOver) return;
+    timerRef.current = setInterval(() => {
+      const role   = gsSpecRef.current.currentPlayer === 1 ? 'sente' : 'gote';
+      const hasByo = (spectateGame?.byoyomi ?? 0) > 0;
+      const prev   = clockSpecRef.current[role];
+      let next = { ...prev };
+      if (!prev.inByo) {
+        if (prev.main > 0) {
+          next.main = prev.main - 1;
+          if (next.main === 0 && hasByo) next.inByo = true;
+        }
+      } else {
+        next.byo = Math.max(0, prev.byo - 1);
+      }
+      clockSpecRef.current = { ...clockSpecRef.current, [role]: next };
+      setClockSpecDisp({ ...clockSpecRef.current });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [view, spectateOver, gsSpec.currentPlayer, spectateGame]); // eslint-disable-line
+
   // ─── 指し手実行 ───────────────────────────────────────────
   const doMove = useCallback((move) => {
     const myColorNum = myColorRef.current === 'sente' ? 1 : 2;
@@ -377,6 +472,7 @@ export default function OnlineLobbyPage() {
       setClockDisp({ ...clockRef.current });
     }
 
+    if (moveAudioRef.current) { moveAudioRef.current.currentTime = 0; moveAudioRef.current.play().catch(() => {}); }
     setSelectedCell(null); setDropSelected(null); setHighlightSet(new Set());
     socketRef.current?.emit('move', {
       gameId: gameRef.current?.id,
@@ -480,6 +576,18 @@ export default function OnlineLobbyPage() {
     fetch(`${API}/api/online/history`, { headers:{ Authorization:`Bearer ${jwt}` } }).then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setHistory(d.games||[]); }).catch(()=>{});
   };
 
+  const handleSpectate = (gameId) => {
+    socketRef.current?.emit('spectate', { gameId });
+  };
+
+  const handleLeaveSpectate = () => {
+    socketRef.current?.emit('leave_spectate', { gameId: spectateGame?.gameId ?? spectateGame?.id });
+    setView('lobby');
+    setSpectateGame(null);
+    setSpectateOver(null);
+    dispatchSpec({ type: 'RESET' });
+  };
+
   const flipped      = myColor === 'gote';
   const myColorNum   = myColor === 'sente' ? 1 : 2;
   const oppColorNum  = myColorNum === 1 ? 2 : 1;
@@ -502,6 +610,27 @@ export default function OnlineLobbyPage() {
         ${active ? (low ? 'text-red-400 animate-pulse' : 'text-white') : 'text-gray-500'}`}
         style={{ fontSize: '2rem' }}
       >
+        {c.main > 0 && <span>{formatTime(c.main)}</span>}
+        {c.main === 0 && hasByo && <span>{c.byo}<span style={{ fontSize:'1rem' }}>秒</span></span>}
+        {c.main > 0 && hasByo && !c.inByo && (
+          <span className="text-gray-600 ml-1" style={{ fontSize:'0.7rem' }}>+{c.byo}</span>
+        )}
+        {c.inByo && c.main > 0 && (
+          <span className="text-orange-400 ml-1" style={{ fontSize:'0.875rem' }}>({c.byo}秒)</span>
+        )}
+      </div>
+    );
+  };
+
+  const renderClockSpec = (role, active) => {
+    const c = clockSpecDisp[role] ?? { main:0, byo:0, inByo:false };
+    const hasByo = (spectateGame?.byoyomi ?? 0) > 0;
+    const secs   = c.inByo ? c.byo : c.main;
+    const low    = active && secs <= 30;
+    return (
+      <div className={`font-mono font-black tabular-nums leading-none select-none flex-shrink-0
+        ${active ? (low ? 'text-red-400 animate-pulse' : 'text-white') : 'text-gray-500'}`}
+        style={{ fontSize: '2rem' }}>
         {c.main > 0 && <span>{formatTime(c.main)}</span>}
         {c.main === 0 && hasByo && <span>{c.byo}<span style={{ fontSize:'1rem' }}>秒</span></span>}
         {c.main > 0 && hasByo && !c.inByo && (
@@ -687,6 +816,103 @@ export default function OnlineLobbyPage() {
   }
 
   // ══════════════════════════════════════════════════════════
+  //  観戦画面 — 全画面縦伸び
+  // ══════════════════════════════════════════════════════════
+  if (view === 'spectating') {
+    const senteActive = gsSpec.currentPlayer === 1 && !spectateOver;
+    const goteActive  = gsSpec.currentPlayer === 2 && !spectateOver;
+    const senteName   = spectateGame?.sente?.displayName || spectateGame?.sente?.email?.split('@')[0] || '先手';
+    const goteName    = spectateGame?.gote?.displayName  || spectateGame?.gote?.email?.split('@')[0]  || '後手';
+    const senteRating = spectateGame?.sente?.rating ?? 1500;
+    const goteRating  = spectateGame?.gote?.rating  ?? 1500;
+
+    return (
+      <div className="h-screen bg-gray-950 text-gray-100 flex justify-center overflow-hidden">
+        {spectateOver && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+            <div className="bg-gray-900 border border-gray-600 rounded-2xl p-8 text-center space-y-4 shadow-2xl max-w-sm w-full mx-4">
+              <p className="text-2xl font-black text-white">対局終了</p>
+              <p className="text-lg font-bold text-yellow-400">
+                {spectateOver.winner === 'draw' ? '引き分け' :
+                 spectateOver.winner === 'sente' ? `▲ ${senteName} の勝ち` : `△ ${goteName} の勝ち`}
+              </p>
+              <p className="text-gray-400 text-sm">{REASON_LABEL[spectateOver.reason] ?? spectateOver.reason}</p>
+              <button onClick={handleLeaveSpectate}
+                className="mt-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold w-full">
+                ロビーに戻る
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="h-full flex flex-col" style={{ width: 'min(100vw, calc(100vh - 200px))' }}>
+          {/* 後手（上側） */}
+          <div className="flex-none flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="min-w-0">
+                <p className="font-bold text-sm leading-tight truncate">△ {goteName}</p>
+                <p className="text-yellow-400 text-xs">{getGrade(goteRating)} R{goteRating}</p>
+              </div>
+              {renderClockSpec('gote', goteActive)}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-purple-400 border border-purple-600 px-2 py-0.5 rounded">観戦中</span>
+              <button onClick={handleLeaveSpectate}
+                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-bold border border-gray-600">
+                退出
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-none">
+            <HandRowHorizontal hands={gsSpec.hands} player={2} activePlayer={gsSpec.currentPlayer}
+              dropSelected={null} onDropSelect={() => {}} editMode={false}
+              align="left" flipped={false} />
+          </div>
+
+          <div ref={boardAreaRef} className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+            <div
+              className="relative flex-shrink-0"
+              style={{
+                width:  boardPx || '90%',
+                height: boardPx ? boardPx * 10 / 9 : undefined,
+                aspectRatio: boardPx ? undefined : '9 / 10',
+                containerType: 'inline-size',
+              }}
+            >
+              <BoardCore board={gsSpec.board} hands={gsSpec.hands} selectedCell={null}
+                highlightSet={new Set()} lastMove={gsSpec.lastMove} candidateArrows={[]}
+                activePlayer={gsSpec.currentPlayer} onCellClick={undefined}
+                editMode={false} flipped={false} sideLayout={false} />
+            </div>
+          </div>
+
+          <div className="flex-none">
+            <HandRowHorizontal hands={gsSpec.hands} player={1} activePlayer={gsSpec.currentPlayer}
+              dropSelected={null} onDropSelect={() => {}} editMode={false}
+              align="right" flipped={false} />
+          </div>
+
+          {/* 先手（下側） */}
+          <div className="flex-none flex items-center justify-between px-3 py-2 bg-gray-900 border-t border-gray-800">
+            <div className="text-xs text-gray-500">
+              {!spectateOver && (senteActive ? '▶ 先手の番' : '▶ 後手の番')}
+              {spectateOver && '対局終了'}
+            </div>
+            <div className="flex items-center gap-3 min-w-0">
+              {renderClockSpec('sente', senteActive)}
+              <div className="min-w-0 text-right">
+                <p className="font-bold text-sm leading-tight truncate">▲ {senteName}</p>
+                <p className="text-yellow-400 text-xs">{getGrade(senteRating)} R{senteRating}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
   //  ロビー画面
   // ══════════════════════════════════════════════════════════
   const activePreset = quickMatchKey ? QUICK_MATCH.find(p => p.key === quickMatchKey) : null;
@@ -772,7 +998,7 @@ export default function OnlineLobbyPage() {
         {/* 右: タブ */}
         <div className="md:col-span-2">
           <div className="flex border-b border-gray-800 mb-4 overflow-x-auto">
-            {[['quick','クイックマッチ'],['wait','待ち受け一覧'],['rank','ランキング'],['history','対局履歴']].map(([t,l])=>(
+            {[['quick','クイックマッチ'],['wait','待ち受け一覧'],['watch','観戦'],['rank','ランキング'],['history','対局履歴']].map(([t,l])=>(
               <button key={t} onClick={() => setLobbyTab(t)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
                   ${lobbyTab===t?'border-blue-500 text-white':'border-transparent text-gray-500 hover:text-gray-300'}`}>
@@ -872,6 +1098,42 @@ export default function OnlineLobbyPage() {
                     })}
                   </tbody>
                 </table>
+              )}
+            </div>
+          )}
+
+          {/* 観戦 */}
+          {lobbyTab==='watch' && (
+            <div>
+              {activeGamesList.length === 0 ? (
+                <p className="text-gray-600 text-sm text-center py-8">現在対局中のゲームはありません</p>
+              ) : (
+                <div className="space-y-2">
+                  {activeGamesList.map((g) => {
+                    const tLabel = TIME_OPTIONS.find(t => t.val === g.timeControl)?.label ?? `${g.timeControl}秒`;
+                    const byLabel = g.byoyomi ? `+${g.byoyomiSeconds}秒` : '';
+                    const sName = g.sente?.displayName || g.sente?.email?.split('@')[0] || '先手';
+                    const gName = g.gote?.displayName  || g.gote?.email?.split('@')[0]  || '後手';
+                    return (
+                      <div key={g.id} className="flex items-center gap-3 bg-gray-800/60 rounded-xl px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
+                            <span className="text-gray-200 truncate">▲ {sName}</span>
+                            <span className="text-gray-600">vs</span>
+                            <span className="text-gray-200 truncate">△ {gName}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {tLabel}{byLabel} · {g.moveCount}手目
+                          </div>
+                        </div>
+                        <button onClick={() => handleSpectate(g.id)}
+                          className="flex-shrink-0 px-4 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded-lg text-sm font-bold transition-colors">
+                          観戦
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}

@@ -98,6 +98,46 @@ function computeGameStates(moves) {
   return states;
 }
 
+// 将棋盤の筋・段の表示文字
+const FILES = ['９','８','７','６','５','４','３','２','１'];
+const RANKS = ['一','二','三','四','五','六','七','八','九'];
+
+// オンライン対局のmoves配列 → buildTreeFromMoves用のparsedMoves配列に変換
+function onlineMovesToParsedMoves(moves) {
+  let board = INITIAL_BOARD.map(r => r.map(c => c ? { ...c } : null));
+  let hands = { 1: {}, 2: {} };
+  const parsed = [];
+  for (let i = 0; i < moves.length; i++) {
+    const move   = moves[i];
+    const player = i % 2 === 0 ? 1 : 2;
+    const prefix = player === 1 ? '▲' : '△';
+    const [toR, toC] = move.to;
+    let label;
+    if (move.piece) {
+      label = `${prefix}${FILES[toC]}${RANKS[toR]}${PIECE_CHAR[move.piece] || move.piece}打`;
+    } else if (move.from) {
+      const [fr, fc] = move.from;
+      const piece = board[fr][fc];
+      const ch = piece ? (PIECE_CHAR[piece.type] || piece.type) : '?';
+      label = `${prefix}${FILES[toC]}${RANKS[toR]}${ch}${move.promote ? '成' : ''}`;
+    } else {
+      label = `${prefix}${FILES[toC]}${RANKS[toR]}?`;
+    }
+    const result = applyMoveToState(board, hands, move, player);
+    board = result.board;
+    hands = result.hands;
+    parsed.push({
+      moveNumber: i + 1,
+      label,
+      from:      move.from || null,
+      to:        move.to,
+      promote:   move.promote || false,
+      dropPiece: move.piece  || null,
+    });
+  }
+  return parsed;
+}
+
 // ── Avatar ────────────────────────────────────────────────────────
 function Avatar({ color, name, size = 48 }) {
   const initial = (name || '?')[0].toUpperCase();
@@ -218,7 +258,7 @@ function HandRow({ hands, player, name, flip }) {
 }
 
 // ── ReplayViewer ──────────────────────────────────────────────────
-function ReplayViewer({ game, onClose }) {
+function ReplayViewer({ game, onClose, onAnalyze }) {
   const moves = useMemo(() => {
     try { return game.moves ? JSON.parse(game.moves) : []; } catch { return []; }
   }, [game.moves]);
@@ -302,14 +342,14 @@ function ReplayViewer({ game, onClose }) {
         <HandRow hands={hands} player={1} name={senteName} flip={false} />
 
         {/* Navigation */}
-        <div className="flex items-center justify-center gap-1 px-4 py-2.5 border-t border-gray-700 shrink-0">
+        <div className="flex items-center justify-center gap-1 px-3 py-2 border-t border-gray-700 shrink-0">
           <button onClick={() => setIdx(0)} disabled={idx === 0} className={btnBase}>
             <ChevronsLeft size={16} />
           </button>
           <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} className={btnBase}>
             <ChevronLeft size={16} />
           </button>
-          <span className="text-xs text-gray-400 w-24 text-center tabular-nums">
+          <span className="text-xs text-gray-400 w-20 text-center tabular-nums">
             {idx === 0 ? '初期局面' : `${idx} / ${moves.length}手`}
           </span>
           <button onClick={() => setIdx(i => Math.min(states.length - 1, i + 1))} disabled={idx === states.length - 1} className={btnBase}>
@@ -317,6 +357,12 @@ function ReplayViewer({ game, onClose }) {
           </button>
           <button onClick={() => setIdx(states.length - 1)} disabled={idx === states.length - 1} className={btnBase}>
             <ChevronsRight size={16} />
+          </button>
+          <button
+            onClick={onAnalyze}
+            className="ml-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs text-white font-bold transition-colors shrink-0"
+          >
+            解析する
           </button>
         </div>
       </div>
@@ -439,6 +485,19 @@ export default function ProfilePage() {
   const [replayGame,  setReplayGame]  = useState(null);
   const [reportState, setReportState] = useState(null);
 
+  function navigateToAnalysis(g) {
+    try {
+      const moves = g.moves ? JSON.parse(g.moves) : [];
+      const parsedMoves = onlineMovesToParsedMoves(moves);
+      const senteName = g.sente_name || g.sente_email?.split('@')[0] || '先手';
+      const goteName  = g.gote_name  || g.gote_email?.split('@')[0]  || '後手';
+      sessionStorage.setItem('shogi_online_replay', JSON.stringify({ parsedMoves, senteName, goteName }));
+      navigate('/app');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   const myToken = localStorage.getItem('shogi_jwt');
   const myUserId = useMemo(() => {
     try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
@@ -550,7 +609,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-900 text-white lg:ml-64 pb-20 lg:pb-4">
       <TsumeNav />
 
-      {replayGame  && <ReplayViewer game={replayGame}  onClose={() => setReplayGame(null)} />}
+      {replayGame  && <ReplayViewer game={replayGame}  onClose={() => setReplayGame(null)} onAnalyze={() => navigateToAnalysis(replayGame)} />}
       {reportState && <ReportModal  {...reportState}   onClose={() => setReportState(null)} />}
 
       <Helmet>
@@ -840,6 +899,15 @@ export default function ProfilePage() {
                                            text-xs text-gray-300 transition-colors"
                               >
                                 棋譜を見る
+                              </button>
+                            )}
+                            {hasMoves && (
+                              <button
+                                onClick={() => navigateToAnalysis(g)}
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-700 hover:bg-blue-600
+                                           text-xs text-white font-bold transition-colors"
+                              >
+                                解析する
                               </button>
                             )}
                             {canReport && (

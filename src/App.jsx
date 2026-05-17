@@ -469,6 +469,26 @@ export default function App() {
     prevNodesCount.current = count;
   }, [state.nodes]);
 
+  // ── オンライン対局棋譜の読み込み (ProfilePage の「解析する」から遷移時) ──
+  useEffect(() => {
+    const raw = sessionStorage.getItem('shogi_online_replay');
+    if (!raw) return;
+    sessionStorage.removeItem('shogi_online_replay');
+    try {
+      const { parsedMoves, senteName, goteName } = JSON.parse(raw);
+      const tree = buildTreeFromMoves(parsedMoves);
+      dispatch({ type: 'LOAD_KIF', tree });
+      setGameInfo({
+        sente: { name: senteName || '先手', mark: '▲', time: '0:00:00' },
+        gote:  { name: goteName  || '後手', mark: '△', time: '0:00:00' },
+      });
+      setKifError(null);
+      setKifTermination(null);
+    } catch (e) {
+      console.error('[online_replay]', e);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [pvCandidate, setPvCandidate] = useState(null);
   const [gameInfo, setGameInfo] = useState(() => loadSession()?.gameInfo ?? GAME_INFO);
   const [kifError, setKifError] = useState(null);
