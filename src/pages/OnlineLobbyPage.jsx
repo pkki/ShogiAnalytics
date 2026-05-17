@@ -14,6 +14,7 @@ import {
 import { getGrade, formatTime } from '../utils/shogiRating';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
 import GameHistoryCard from '../components/GameHistoryCard.jsx';
+import GameHistoryFilter, { filterGames } from '../components/GameHistoryFilter.jsx';
 import AccountMenu from '../components/AccountMenu';
 import TsumeNav from '../components/TsumeNav';
 
@@ -284,6 +285,9 @@ export default function OnlineLobbyPage() {
   const [waitList,       setWaitList]       = useState([]);
   const [leaderboard,    setLeaderboard]    = useState([]);
   const [history,        setHistory]        = useState([]);
+  const [histResultFilter, setHistResultFilter] = useState('all');
+  const [histReasonFilter, setHistReasonFilter] = useState('all');
+  const [histTimeFilter,   setHistTimeFilter]   = useState('all');
   const [activeGamesList, setActiveGamesList] = useState([]);
   const [replayGame,     setReplayGame]     = useState(null);
 
@@ -1546,21 +1550,33 @@ export default function OnlineLobbyPage() {
           )}
 
           {/* 対局履歴 */}
-          {lobbyTab==='history' && (
-            <div className="space-y-3">
-              {history.length===0 ? (
-                <p className="text-gray-600 text-sm text-center py-8">対局履歴がありません</p>
-              ) : history.map(g => (
-                <GameHistoryCard
-                  key={g.id}
-                  game={g}
-                  perspectiveId={userId}
-                  onReplay={() => setReplayGame(g)}
-                  onAnalyze={() => navigateToAnalysis(g)}
+          {lobbyTab==='history' && (() => {
+            const filtered = filterGames(history, userId, histResultFilter, histReasonFilter, histTimeFilter);
+            return (
+              <div className="space-y-3">
+                <GameHistoryFilter
+                  resultFilter={histResultFilter} setResultFilter={setHistResultFilter}
+                  reasonFilter={histReasonFilter} setReasonFilter={setHistReasonFilter}
+                  timeFilter={histTimeFilter}     setTimeFilter={setHistTimeFilter}
+                  total={history.length} filtered={filtered.length}
                 />
-              ))}
-            </div>
-          )}
+                {history.length === 0
+                  ? <p className="text-gray-600 text-sm text-center py-8">対局履歴がありません</p>
+                  : filtered.length === 0
+                    ? <p className="text-gray-600 text-sm text-center py-8">条件に一致する対局がありません</p>
+                    : filtered.map(g => (
+                        <GameHistoryCard
+                          key={g.id}
+                          game={g}
+                          perspectiveId={userId}
+                          onReplay={() => setReplayGame(g)}
+                          onAnalyze={() => navigateToAnalysis(g)}
+                        />
+                      ))
+                }
+              </div>
+            );
+          })()}
         </div>
         </div>
       </div>

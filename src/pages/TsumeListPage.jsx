@@ -3,12 +3,13 @@
  * 詰将棋一覧ページ  /tsume/category/:moves
  * moves: 1-5 | 7-11 | 13+ | all
  */
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { Heart, ChevronRight, Lock, Shuffle, User } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
+import AccountMenu from '../components/AccountMenu.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -138,12 +139,22 @@ function CategorySidebar() {
 export default function TsumeListPage() {
   const { moves } = useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [items,     setItems]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [sort,      setSort]      = useState('recent');
   const [sourceTab, setSourceTab] = useState('user'); // 'user' | 'generator'
 
   const label = t(`tsume.categories.${moves}`) || t('tsume.categories.all');
+
+  const authInfo = useMemo(() => {
+    const token = localStorage.getItem('shogi_jwt');
+    if (!token) return null;
+    try {
+      const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { email: p.email, userId: p.userId };
+    } catch { return null; }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -190,6 +201,13 @@ export default function TsumeListPage() {
               </button>
             ))}
           </div>
+          {authInfo && (
+            <AccountMenu
+              email={authInfo.email}
+              userId={authInfo.userId}
+              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+            />
+          )}
         </div>
         {/* ソースタブ */}
         <div className="flex border-t border-gray-700/60 lg:ml-64">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../state/gameState.js';
 import { BoardCore, HandRowHorizontal, HandColumnVertical } from '../components/ShogiBoard.jsx';
 import TsumeNav from '../components/TsumeNav.jsx';
+import AccountMenu from '../components/AccountMenu.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -243,6 +244,15 @@ function MobileCategoryLinks() {
 export default function TsumePage() {
   const { token } = useParams();
   const navigate  = useNavigate();
+
+  const authInfo = useMemo(() => {
+    const t = localStorage.getItem('shogi_jwt');
+    if (!t) return null;
+    try {
+      const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { email: p.email, userId: p.userId };
+    } catch { return null; }
+  }, []);
 
   // ── ロード状態 ─────────────────────────────────────────────
   const [loadStatus,  setLoadStatus]  = useState('loading');
@@ -649,6 +659,13 @@ export default function TsumePage() {
               )}
             </div>
           </div>
+          {authInfo && (
+            <AccountMenu
+              email={authInfo.email}
+              userId={authInfo.userId}
+              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+            />
+          )}
         </div>
       </div>
 

@@ -4592,6 +4592,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
             setUseWebSocketFallback(v);
             localStorage.setItem('shogi_prefer_ws', v ? '1' : '0');
           }}
+          authToken={authToken}
         />
       )}
 

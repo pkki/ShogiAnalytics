@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AccountMenu from '../components/AccountMenu.jsx';
 import {
   ChevronLeft, RotateCcw, Lightbulb, Play, Square, Shuffle, Cpu, Wifi, WifiOff,
   SkipBack, SkipForward, ChevronRight as ChevronRightIcon, FlipVertical2, Trophy,
@@ -138,6 +139,16 @@ function engineParams(moves) {
 // ── メインコンポーネント ─────────────────────────────────────────────
 
 export default function TsumeGeneratorPage() {
+  const navigate = useNavigate();
+  const authInfo = useMemo(() => {
+    const t = localStorage.getItem('shogi_jwt');
+    if (!t) return null;
+    try {
+      const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { email: p.email, userId: p.userId };
+    } catch { return null; }
+  }, []);
+
   const [difficulty,      setDifficulty]      = useState(3);
   const [forceEngine,     setForceEngine]     = useState(false);
   const [lastMethod,      setLastMethod]      = useState(null);
@@ -792,6 +803,13 @@ export default function TsumeGeneratorPage() {
               ? <><Wifi size={10} className="animate-pulse shrink-0" />接続中</>
               : <><WifiOff size={10} className="shrink-0" />未接続</>}
           </div>
+          {authInfo && (
+            <AccountMenu
+              email={authInfo.email}
+              userId={authInfo.userId}
+              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+            />
+          )}
         </div>
       </div>
 

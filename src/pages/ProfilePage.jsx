@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 import { getGrade } from '../utils/shogiRating';
+import GameHistoryFilter, { filterGames } from '../components/GameHistoryFilter.jsx';
 import GameHistoryCard from '../components/GameHistoryCard.jsx';
+import AccountMenu from '../components/AccountMenu.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -642,6 +644,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [games,   setGames]   = useState([]);
+  const [gameResultFilter, setGameResultFilter] = useState('all');
+  const [gameReasonFilter, setGameReasonFilter] = useState('all');
+  const [gameTimeFilter,   setGameTimeFilter]   = useState('all');
 
   const [replayGame,      setReplayGame]      = useState(null);
   const [reportState,     setReportState]     = useState(null);
@@ -661,9 +666,14 @@ export default function ProfilePage() {
   }
 
   const myToken = localStorage.getItem('shogi_jwt');
-  const myUserId = useMemo(() => {
-    try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
+  const myAuthInfo = useMemo(() => {
+    if (!myToken) return null;
+    try {
+      const p = JSON.parse(atob(myToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { userId: p.userId, email: p.email };
+    } catch { return null; }
   }, [myToken]);
+  const myUserId = myAuthInfo?.userId ?? null;
   const isMe = myUserId === userId;
 
   // 自分が参加した対局（通報の証拠選択用）
@@ -804,10 +814,17 @@ export default function ProfilePage() {
           <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white transition-colors">
             <ChevronLeft size={20} />
           </button>
-          <div>
+          <div className="flex-1">
             <p className="font-bold text-white leading-none">{displayName}</p>
             <p className="text-xs text-gray-500 mt-0.5">{tsumes.length}{t('profile.tsumeCount')}</p>
           </div>
+          {myAuthInfo && (
+            <AccountMenu
+              email={myAuthInfo.email}
+              userId={myAuthInfo.userId}
+              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+            />
+          )}
         </div>
       </div>
 
@@ -1043,21 +1060,33 @@ export default function ProfilePage() {
           )}
 
           {/* 対局履歴タブ */}
-          {tab === 'games' && (
-            games.length === 0
+          {tab === 'games' && (() => {
+            const filtered = filterGames(games, userId, gameResultFilter, gameReasonFilter, gameTimeFilter);
+            return games.length === 0
               ? <p className="text-gray-500 text-sm text-center py-8">対局履歴はありません</p>
-              : <div className="flex flex-col gap-3">
-                  {games.map(g => (
-                    <GameHistoryCard
-                      key={g.id}
-                      game={g}
-                      perspectiveId={userId}
-                      onReplay={() => setReplayGame(g)}
-                      onAnalyze={() => navigateToAnalysis(g)}
-                    />
-                  ))}
-                </div>
-          )}
+              : <>
+                  <GameHistoryFilter
+                    resultFilter={gameResultFilter} setResultFilter={setGameResultFilter}
+                    reasonFilter={gameReasonFilter} setReasonFilter={setGameReasonFilter}
+                    timeFilter={gameTimeFilter}     setTimeFilter={setGameTimeFilter}
+                    total={games.length} filtered={filtered.length}
+                  />
+                  {filtered.length === 0
+                    ? <p className="text-gray-500 text-sm text-center py-8">条件に一致する対局がありません</p>
+                    : <div className="flex flex-col gap-3">
+                        {filtered.map(g => (
+                          <GameHistoryCard
+                            key={g.id}
+                            game={g}
+                            perspectiveId={userId}
+                            onReplay={() => setReplayGame(g)}
+                            onAnalyze={() => navigateToAnalysis(g)}
+                          />
+                        ))}
+                      </div>
+                  }
+                </>;
+          })()}
         </div>
 
       </div>
