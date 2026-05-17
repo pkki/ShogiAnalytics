@@ -185,7 +185,7 @@ function detectCastle(board) {
 
 // ── 戦型検出（先手 player1 のみ） ────────────────────────────────────
 function detectStrategies(board, hands) {
-  return true;
+  return [];
   const results = [];
   const r1 = findRookPos(board, 1);
   const r2 = findRookPos(board, 2);

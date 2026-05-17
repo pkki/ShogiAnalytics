@@ -1837,7 +1837,13 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     const node = state.nodes[state.currentId];
     if (!node || node.moveNumber < 3) return;
 
-    const formations = detectFormations(node.board, node.hands);
+    let formations;
+    try {
+      formations = detectFormations(node.board, node.hands);
+    } catch (e) {
+      console.warn('[formation] detectFormations error:', e);
+      return;
+    }
     const newOnes = formations.filter(f => !announcedFormationsRef.current.has(f));
     if (newOnes.length === 0) return;
 
