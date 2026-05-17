@@ -12,6 +12,8 @@ import {
   Heart, Bookmark, Edit2, Check, X, Flag,
 } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
+import { getGrade } from '../utils/shogiRating';
+import GameHistoryCard from '../components/GameHistoryCard.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -28,27 +30,6 @@ const PIECE_CHAR = {
 const HAND_ORDER = ['R','B','G','S','N','L','P'];
 
 // ── Rating → grade (将棋倶楽部24 準拠) ───────────────────────────
-function ratingToGrade(r = 1500) {
-  if (r >= 2500) return '九段';
-  if (r >= 2400) return '八段';
-  if (r >= 2300) return '七段';
-  if (r >= 2200) return '六段';
-  if (r >= 2100) return '五段';
-  if (r >= 2000) return '四段';
-  if (r >= 1900) return '三段';
-  if (r >= 1800) return '二段';
-  if (r >= 1700) return '初段';
-  if (r >= 1600) return '一級';
-  if (r >= 1500) return '二級';
-  if (r >= 1400) return '三級';
-  if (r >= 1300) return '四級';
-  if (r >= 1200) return '五級';
-  if (r >= 1100) return '六級';
-  if (r >= 1000) return '七級';
-  if (r >= 900)  return '八級';
-  if (r >= 800)  return '九級';
-  return '十級';
-}
 
 // ── Initial board & move applier (for replay) ────────────────────
 const INITIAL_BOARD = [
@@ -468,6 +449,160 @@ function ReportModal({ game, reportedId, reportedName, onClose }) {
   );
 }
 
+// ── ReportUserModal ───────────────────────────────────────────────
+function ReportUserModal({ reportedId, reportedName, games, onClose }) {
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const myToken = localStorage.getItem('shogi_jwt');
+  const myUserId = (() => {
+    try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
+  })();
+
+  const REASON_LABEL_LOCAL = { resign:'投了', timeout:'時間切れ', checkmate:'詰み', disconnect:'切断' };
+
+  async function handleSubmit() {
+    if (!selectedGame || !reason.trim() || !myToken) return;
+    setSubmitting(true);
+    setErrMsg('');
+    try {
+      const res = await fetch(`${CLOUD_API}/api/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${myToken}` },
+        body: JSON.stringify({ gameId: selectedGame.id, reportedId, reason: reason.trim() }),
+      });
+      const data = await res.json();
+      if (data.ok) setSubmitted(true);
+      else setErrMsg(data.error || '通報に失敗しました');
+    } catch {
+      setErrMsg('通報に失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl flex flex-col border border-gray-700"
+           style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 shrink-0">
+          <h2 className="font-bold text-white text-base flex items-center gap-2">
+            <Flag size={16} className="text-red-400" />
+            ユーザーを通報
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {submitted ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-600/20 border border-green-500/40 flex items-center justify-center mb-4">
+              <Flag size={22} className="text-green-400" />
+            </div>
+            <p className="text-green-400 font-bold text-lg mb-2">通報を受け付けました</p>
+            <p className="text-gray-400 text-sm mb-6">内容を確認次第、対応いたします。</p>
+            <button onClick={onClose}
+              className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm text-white transition-colors">
+              閉じる
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto min-h-0 px-5 py-4 space-y-5">
+            {/* 通報対象 */}
+            <div className="bg-gray-800/60 border border-gray-700 rounded-xl px-4 py-3">
+              <p className="text-xs text-gray-500 mb-0.5">通報対象</p>
+              <p className="font-bold text-white">{reportedName}</p>
+            </div>
+
+            {/* 棋譜選択 */}
+            <div>
+              <p className="text-sm font-bold text-white mb-1">
+                証拠となる対局を選択
+                <span className="text-red-400 ml-1">*</span>
+              </p>
+              <p className="text-xs text-gray-500 mb-3">自分が参加した対局のみ選択できます</p>
+              <div className="space-y-2">
+                {games.map(g => {
+                  const iAmSente = g.sente_id === myUserId;
+                  const won = (iAmSente && g.winner === 'sente') || (!iAmSente && g.winner === 'gote');
+                  const isDraw = g.winner === 'draw';
+                  const date = g.finished_at ? new Date(g.finished_at * 1000).toLocaleDateString('ja-JP') : '';
+                  const moveCount = (() => { try { return g.moves ? JSON.parse(g.moves).length : 0; } catch { return 0; } })();
+                  const isSelected = selectedGame?.id === g.id;
+                  return (
+                    <button key={g.id} onClick={() => setSelectedGame(g)}
+                      className={`w-full text-left rounded-xl px-4 py-3 border transition-colors ${
+                        isSelected
+                          ? 'bg-red-900/20 border-red-500/60'
+                          : 'bg-gray-800/60 border-gray-700 hover:border-gray-500'
+                      }`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold w-6 shrink-0 ${
+                          isDraw ? 'text-gray-400' : won ? 'text-blue-400' : 'text-red-400'
+                        }`}>{isDraw ? '引' : won ? '勝' : '負'}</span>
+                        <span className="text-xs text-gray-400 shrink-0">{date}</span>
+                        <span className="text-xs text-gray-500 shrink-0">{iAmSente ? '先手' : '後手'}</span>
+                        <span className="text-xs text-gray-500 ml-auto shrink-0">
+                          {REASON_LABEL_LOCAL[g.reason] ?? g.reason}
+                          {moveCount > 0 && `  ${moveCount}手`}
+                        </span>
+                        {isSelected && (
+                          <span className="text-red-400 shrink-0">
+                            <Check size={14} />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 通報理由 */}
+            <div>
+              <label className="block text-sm font-bold text-white mb-1">
+                通報理由
+                <span className="text-red-400 ml-1">*</span>
+                <span className="text-gray-600 font-normal ml-2 text-xs">（最大500文字）</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={e => setReason(e.target.value.slice(0, 500))}
+                placeholder="AIを使った不正が疑われる理由を具体的に記載してください&#10;例）序盤から毎手最善手を指し続け、人間離れした精度で対局していた"
+                rows={4}
+                className="w-full bg-gray-800 border border-gray-600 rounded-xl px-3 py-2 text-sm text-white
+                           resize-none focus:outline-none focus:border-red-500 mb-1"
+              />
+              <p className="text-right text-xs text-gray-600">{reason.length}/500</p>
+            </div>
+
+            {errMsg && <p className="text-red-400 text-xs">{errMsg}</p>}
+
+            {/* ボタン */}
+            <div className="flex gap-2 pb-2">
+              <button onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm text-gray-300 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={handleSubmit}
+                disabled={!selectedGame || !reason.trim() || submitting}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-sm text-white font-bold
+                           transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                {submitting ? '送信中…' : '通報する'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── ProfilePage ───────────────────────────────────────────────────
 export default function ProfilePage() {
   const { t } = useTranslation();
@@ -481,8 +616,9 @@ export default function ProfilePage() {
   const [error,   setError]   = useState('');
   const [games,   setGames]   = useState([]);
 
-  const [replayGame,  setReplayGame]  = useState(null);
-  const [reportState, setReportState] = useState(null);
+  const [replayGame,      setReplayGame]      = useState(null);
+  const [reportState,     setReportState]     = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   function navigateToAnalysis(g) {
     try {
@@ -502,6 +638,12 @@ export default function ProfilePage() {
     try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
   }, [myToken]);
   const isMe = myUserId === userId;
+
+  // 自分が参加した対局（通報の証拠選択用）
+  const gamesAgainstMe = useMemo(
+    () => games.filter(g => g.sente_id === myUserId || g.gote_id === myUserId),
+    [games, myUserId]
+  );
 
   const [editing, setEditing] = useState(false);
   const [editName,  setEditName]  = useState('');
@@ -593,7 +735,7 @@ export default function ProfilePage() {
   );
 
   const displayName = profile?.displayName || profile?.email?.split('@')[0] || t('profile.anonymous');
-  const grade    = ratingToGrade(profile?.rating);
+  const grade    = getGrade(profile?.rating);
   const wins     = profile?.wins   ?? 0;
   const losses   = profile?.losses ?? 0;
   const draws    = profile?.draws  ?? 0;
@@ -610,6 +752,14 @@ export default function ProfilePage() {
 
       {replayGame  && <ReplayViewer game={replayGame}  onClose={() => setReplayGame(null)} onAnalyze={() => navigateToAnalysis(replayGame)} />}
       {reportState && <ReportModal  {...reportState}   onClose={() => setReportState(null)} />}
+      {showReportModal && (
+        <ReportUserModal
+          reportedId={userId}
+          reportedName={displayName}
+          games={gamesAgainstMe}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
 
       <Helmet>
         <title>{displayName}{t('profile.title')}</title>
@@ -645,6 +795,15 @@ export default function ProfilePage() {
                            text-gray-300 text-sm hover:bg-gray-800 transition-colors"
               >
                 <Edit2 size={13} /> {t('profile.editProfile')}
+              </button>
+            )}
+            {!isMe && myUserId && gamesAgainstMe.length > 0 && !editing && (
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-700
+                           text-gray-500 text-sm hover:bg-red-900/30 hover:border-red-700/50 hover:text-red-400 transition-colors"
+              >
+                <Flag size={13} /> 通報する
               </button>
             )}
             {isMe && editing && (
@@ -823,106 +982,16 @@ export default function ProfilePage() {
           {tab === 'games' && (
             games.length === 0
               ? <p className="text-gray-500 text-sm text-center py-8">対局履歴はありません</p>
-              : <div className="flex flex-col gap-2">
-                  {games.map(g => {
-                    const isSente = g.sente_id === userId;
-                    const myRatingBefore = isSente ? g.sente_rating_before : g.gote_rating_before;
-                    const myRatingAfter  = isSente ? g.sente_rating_after  : g.gote_rating_after;
-                    const oppName = isSente
-                      ? (g.gote_name  || g.gote_email?.split('@')[0]  || '相手')
-                      : (g.sente_name || g.sente_email?.split('@')[0] || '相手');
-                    const oppId   = isSente ? g.gote_id : g.sente_id;
-                    const isDraw  = g.winner === 'draw';
-                    const won     = !isDraw && ((isSente && g.winner === 'sente') || (!isSente && g.winner === 'gote'));
-                    const ratingDelta = myRatingAfter != null ? myRatingAfter - myRatingBefore : null;
-                    const date    = g.finished_at ? new Date(g.finished_at * 1000).toLocaleDateString('ja-JP') : '';
-                    const hasMoves = g.moves && g.moves.length > 2;
-                    const viewerPlayed = myUserId && (g.sente_id === myUserId || g.gote_id === myUserId);
-                    const canReport = myUserId && !isMe && viewerPlayed && myUserId !== oppId;
-
-                    return (
-                      <div key={g.id}
-                        className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {/* 勝敗 */}
-                          <div className={`text-sm font-bold w-7 text-center shrink-0 ${
-                            isDraw ? 'text-gray-400' : won ? 'text-blue-400' : 'text-red-400'
-                          }`}>
-                            {isDraw ? '引' : won ? '勝' : '負'}
-                          </div>
-
-                          {/* 対局情報 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <span className="text-gray-500 text-xs shrink-0">{isSente ? '先手' : '後手'}</span>
-                              <Link to={`/profile/${oppId}`}
-                                className="text-white font-bold hover:text-blue-300 truncate transition-colors">
-                                {oppName}
-                              </Link>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-gray-500">{date}</span>
-                              {g.reason && (
-                                <span className="text-xs text-gray-600">
-                                  {REASON_LABEL[g.reason] || g.reason}
-                                </span>
-                              )}
-                              {hasMoves && (
-                                <span className="text-xs text-gray-600">
-                                  {(() => { try { return JSON.parse(g.moves).length; } catch { return 0; } })()}手
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* レーティング変動 */}
-                          <div className="text-right shrink-0">
-                            <div className="text-sm text-gray-300 font-mono tabular-nums">
-                              {myRatingAfter ?? myRatingBefore}
-                            </div>
-                            {ratingDelta != null && (
-                              <div className={`text-xs font-bold ${ratingDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {ratingDelta >= 0 ? '+' : ''}{ratingDelta}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* ボタン行 */}
-                        {(hasMoves || canReport) && (
-                          <div className="flex gap-2 mt-2 pt-2 border-t border-gray-700/60">
-                            {hasMoves && (
-                              <button
-                                onClick={() => setReplayGame(g)}
-                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600
-                                           text-xs text-gray-300 transition-colors"
-                              >
-                                棋譜を見る
-                              </button>
-                            )}
-                            {hasMoves && (
-                              <button
-                                onClick={() => navigateToAnalysis(g)}
-                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-700 hover:bg-blue-600
-                                           text-xs text-white font-bold transition-colors"
-                              >
-                                解析する
-                              </button>
-                            )}
-                            {canReport && (
-                              <button
-                                onClick={() => setReportState({ game: g, reportedId: oppId, reportedName: oppName })}
-                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-gray-700 hover:bg-red-900/40
-                                           text-xs text-gray-500 hover:text-red-400 transition-colors ml-auto"
-                              >
-                                <Flag size={11} /> 通報
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+              : <div className="flex flex-col gap-3">
+                  {games.map(g => (
+                    <GameHistoryCard
+                      key={g.id}
+                      game={g}
+                      perspectiveId={userId}
+                      onReplay={() => setReplayGame(g)}
+                      onAnalyze={() => navigateToAnalysis(g)}
+                    />
+                  ))}
                 </div>
           )}
         </div>

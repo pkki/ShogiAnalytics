@@ -1,25 +1,28 @@
-// 将棋倶楽部24準拠のレーティング・段級換算
-// R1500=初段、50Rごとに1級(三十級〜一級)、150Rごとに1段(初段〜九段)
-
-const KYU_NAMES = [
-  '', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
-  '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-  '二十一', '二十二', '二十三', '二十四', '二十五', '二十六', '二十七', '二十八', '二十九', '三十',
-];
-
 export function getGrade(rating) {
-  const r = Math.max(0, Math.floor(rating));
-  if (r >= 2700) return '九段';
-  if (r >= 2550) return '八段';
-  if (r >= 2400) return '七段';
-  if (r >= 2250) return '六段';
-  if (r >= 2100) return '五段';
-  if (r >= 1950) return '四段';
-  if (r >= 1800) return '三段';
-  if (r >= 1650) return '二段';
-  if (r >= 1500) return '初段';
-  const kyu = Math.min(30, Math.ceil((1500 - r) / 50));
-  return `${KYU_NAMES[kyu]}級`;
+  const r = Math.max(0, Math.floor(rating ?? 1500));
+  if (r >= 3000) return '八段';
+  if (r >= 2800) return '七段';
+  if (r >= 2600) return '六段';
+  if (r >= 2400) return '五段';
+  if (r >= 2200) return '四段';
+  if (r >= 2000) return '三段';
+  if (r >= 1800) return '二段';
+  if (r >= 1600) return '初段';
+  if (r >= 1500) return '１級';
+  if (r >= 1400) return '２級';
+  if (r >= 1300) return '３級';
+  if (r >= 1200) return '４級';
+  if (r >= 1100) return '５級';
+  if (r >= 1000) return '６級';
+  if (r >= 900)  return '７級';
+  if (r >= 800)  return '８級';
+  if (r >= 700)  return '９級';
+  if (r >= 600)  return '10級';
+  if (r >= 500)  return '11級';
+  if (r >= 400)  return '12級';
+  if (r >= 300)  return '13級';
+  if (r >= 200)  return '14級';
+  return '15級';
 }
 
 // Eloレーティング変動計算

@@ -13,6 +13,7 @@ import {
 } from '../state/gameState';
 import { getGrade, formatTime } from '../utils/shogiRating';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
+import GameHistoryCard from '../components/GameHistoryCard.jsx';
 import AccountMenu from '../components/AccountMenu';
 import TsumeNav from '../components/TsumeNav';
 
@@ -1546,43 +1547,18 @@ export default function OnlineLobbyPage() {
 
           {/* 対局履歴 */}
           {lobbyTab==='history' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {history.length===0 ? (
                 <p className="text-gray-600 text-sm text-center py-8">対局履歴がありません</p>
-              ) : history.map((g) => {
-                const isSente = g.sente_id === userId;
-                const myR   = isSente ? g.sente_rating_before : g.gote_rating_before;
-                const myRA  = isSente ? g.sente_rating_after  : g.gote_rating_after;
-                const opp   = isSente ? (g.gote_name||g.gote_email) : (g.sente_name||g.sente_email);
-                const myRole = isSente ? 'sente' : 'gote';
-                const won   = g.winner === myRole;
-                const delta = (myRA??myR) - myR;
-                const hasMoves = !!g.moves;
-                return (
-                  <div key={g.id} className="bg-gray-800/60 rounded px-3 py-2 text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className={`font-bold w-8 shrink-0 ${won?'text-yellow-400':'text-red-400'}`}>{won?'勝':'負'}</span>
-                      <span className="flex-1 text-gray-300 text-xs truncate">{opp?.split('@')[0]}</span>
-                      <span className="text-gray-500 text-xs shrink-0">{REASON_LABEL[g.reason]??g.reason}</span>
-                      <span className={`font-mono font-bold text-xs shrink-0 ${delta>=0?'text-green-400':'text-red-400'}`}>
-                        {delta>=0?'+':''}{delta}
-                      </span>
-                    </div>
-                    {hasMoves && (
-                      <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-700/60">
-                        <button onClick={() => setReplayGame(g)}
-                          className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
-                          棋譜を見る
-                        </button>
-                        <button onClick={() => navigateToAnalysis(g)}
-                          className="px-3 py-1 rounded-lg bg-blue-700 hover:bg-blue-600 text-xs text-white font-bold transition-colors">
-                          解析する
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              ) : history.map(g => (
+                <GameHistoryCard
+                  key={g.id}
+                  game={g}
+                  perspectiveId={userId}
+                  onReplay={() => setReplayGame(g)}
+                  onAnalyze={() => navigateToAnalysis(g)}
+                />
+              ))}
             </div>
           )}
         </div>
