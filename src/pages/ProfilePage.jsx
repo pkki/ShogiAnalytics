@@ -9,7 +9,7 @@ import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Heart, Bookmark, Edit2, Check, X, Flag, User, Shuffle,
+  Heart, Bookmark, Edit2, Check, X, Flag, User, Shuffle, Trash2,
 } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 import { getGrade } from '../utils/shogiRating';
@@ -172,16 +172,42 @@ function MiniBoardPreview({ boardJson }) {
 }
 
 // ── GridCard ──────────────────────────────────────────────────────
-function GridCard({ token, title, numMoves, boardJson, likes, authorName, showAuthor }) {
+const CLOUD_API_PROFILE = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
+
+function GridCard({ token, title, numMoves, boardJson, likes, authorName, showAuthor, onDelete, myToken }) {
+  const handleDelete = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('この詰将棋を削除しますか？')) return;
+    try {
+      const res = await fetch(`${CLOUD_API_PROFILE}/api/tsume/${token}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${myToken}` },
+      });
+      const data = await res.json();
+      if (data.ok) onDelete(token);
+    } catch {}
+  };
+
   return (
     <Link
       to={`/tsume/${token}`}
       className="block bg-gray-800 border border-gray-700 hover:border-gray-500
-                 rounded-xl overflow-hidden transition-all group"
+                 rounded-xl overflow-hidden transition-all group relative"
     >
       <div className="p-3 bg-amber-950/20">
         <MiniBoardPreview boardJson={boardJson} />
       </div>
+      {onDelete && (
+        <button
+          onClick={handleDelete}
+          className="absolute top-2 right-2 p-1 rounded-full bg-gray-900/80 text-gray-500
+                     hover:text-red-400 hover:bg-gray-900 transition-colors opacity-0 group-hover:opacity-100"
+          title="削除"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
       <div className="px-2 pb-2 pt-1">
         {showAuthor && authorName && (
           <p className="text-[10px] text-gray-500 mb-0.5 truncate">{authorName} 作</p>
@@ -948,19 +974,17 @@ export default function ProfilePage() {
 
           {/* 投稿タブ */}
           {tab === 'posts' && (() => {
-            const filtered = tsumes.filter(item =>
-              postSourceTab === 'generator'
-                ? item.source === 'generator'
-                : !item.source || item.source === 'user'
-            );
+            const userItems = tsumes.filter(item => !item.source || item.source === 'user');
+            const genItems  = tsumes.filter(item => item.source === 'generator');
+            const filtered  = postSourceTab === 'generator' ? genItems : userItems;
             return (
               <>
-                {/* 投稿ソースサブタブ */}
+                {/* 投稿ソースサブタブ（件数付き） */}
                 <div className="flex mb-3 rounded-xl overflow-hidden border border-gray-700 text-xs font-medium">
                   {[
-                    { key: 'user',      label: 'ユーザーが作成', icon: User },
-                    { key: 'generator', label: 'ジェネレーター', icon: Shuffle },
-                  ].map(({ key, label: lbl, icon: Icon }) => (
+                    { key: 'user',      label: 'ユーザーが作成', icon: User,    count: userItems.length },
+                    { key: 'generator', label: 'ジェネレーター', icon: Shuffle, count: genItems.length  },
+                  ].map(({ key, label: lbl, icon: Icon, count }) => (
                     <button
                       key={key}
                       onClick={() => setPostSourceTab(key)}
@@ -970,6 +994,9 @@ export default function ProfilePage() {
                           : 'bg-gray-800 text-gray-400 hover:text-white'}`}
                     >
                       <Icon size={11} />{lbl}
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${postSourceTab === key ? 'bg-blue-500' : 'bg-gray-700'}`}>
+                        {count}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -985,6 +1012,8 @@ export default function ProfilePage() {
                           boardJson={item.board_json}
                           likes={item.likes}
                           showAuthor={false}
+                          onDelete={isMe ? (tok) => setTsumes(prev => prev.filter(t => t.token !== tok)) : undefined}
+                          myToken={isMe ? myToken : undefined}
                         />
                       ))}
                     </div>
