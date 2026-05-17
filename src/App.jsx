@@ -4556,8 +4556,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       {showShogiWars && (
         <ShogiWarsDialog
           onClose={() => setShowShogiWars(false)}
-          onLoad={loadShogiWarsGame}
-          defaultUsername={userSettings.swarUsername ?? ''}
+          onPaste={() => { setShowShogiWars(false); handlePasteKif(); }}
         />
       )}
 

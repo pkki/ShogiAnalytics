@@ -6,7 +6,7 @@ import {
   BarChart2, Cpu, Cloud, Smartphone, GitBranch,
   TrendingUp, ArrowRight, CheckCircle, Zap, BookOpen,
   Mail, Users, Shield, Clock, ChevronDown,
-  Globe, Lock, Terminal, Home, Send, Loader2, Swords, Menu, X,
+  Globe, Lock, Terminal, Home, Send, Loader2, Swords, Menu, X, Trophy,
 } from 'lucide-react';
 import Turnstile from '../components/Turnstile';
 
@@ -769,6 +769,12 @@ export default function HomePage() {
             <FeatureCard delay={480} icon={<Swords size={22} className="text-amber-400" />}
               title={t('home.features.tsume.title')}
               desc={t('home.features.tsume.desc')} />
+            <FeatureCard delay={560} icon={<Users size={22} className="text-green-400" />}
+              title="オンライン対局"
+              desc="クイックマッチで棋力の近い相手と即マッチング。待ち受け登録や友達対局にも対応。観戦機能でほかの対局をリアルタイムに観ることもできます。" />
+            <FeatureCard delay={640} icon={<Trophy size={22} className="text-yellow-400" />}
+              title="レーティング &amp; 友達機能"
+              desc="対局ごとにレーティングが更新されランキングに反映。友達登録してフレンドリーマッチを楽しんだり、オンライン状態をリアルタイムで確認できます。" />
           </div>
         </div>
       </section>
@@ -822,6 +828,114 @@ export default function HomePage() {
                          transition-all shadow-lg shadow-amber-600/30 hover:scale-105">
               <Swords size={15} />
               {t('home.tsume.cta')}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ オンライン対局 ══════════════════════════════════════ */}
+      <section className="py-24 px-6 bg-blue-950/10 border-y border-blue-800/20">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-500/30
+                            text-blue-400 text-xs px-3 py-1.5 rounded-full mb-4">
+              <Users size={10} /> オンライン対局
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+              友達や世界中の棋士と、いますぐ対局
+            </h2>
+            <p className="text-gray-400 text-base max-w-xl mx-auto">
+              レーティング制のクイックマッチ、待ち受け登録、友達対局など多彩な対局スタイルに対応。
+              観戦機能でほかの対局をリアルタイムに楽しむこともできます。
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            {[
+              {
+                icon: <Zap size={18} className="text-blue-400" />,
+                title: 'クイックマッチ / 待ち受け',
+                desc: '棋力の近い相手と自動マッチング。10秒・3分・10分のプリセットや、自由な持ち時間・秒読みで待ち受け登録することも可能。',
+              },
+              {
+                icon: <Users size={18} className="text-green-400" />,
+                title: '友達登録 & 友達対局',
+                desc: '名前でユーザーを検索して友達申請。オンライン中の友達に対局を申し込んで、持ち時間を自由に設定したフレンドリーマッチを楽しめます。',
+              },
+              {
+                icon: <Trophy size={18} className="text-yellow-400" />,
+                title: 'レーティング & ランキング',
+                desc: '対局ごとにレーティングが自動更新。ランキングで全ユーザーと順位を競いながら棋力の向上を確認できます。',
+              },
+            ].map(({ icon, title, desc }) => (
+              <div key={title}
+                className="bg-gray-800/50 border border-blue-700/30 rounded-2xl p-5
+                           hover:border-blue-500/40 transition-colors group">
+                <div className="w-10 h-10 bg-blue-600/15 border border-blue-500/30 rounded-xl
+                                flex items-center justify-center mb-4
+                                group-hover:bg-blue-600/25 transition-all duration-300">
+                  {icon}
+                </div>
+                <h3 className="text-white font-bold text-sm mb-2">{title}</h3>
+                <p className="text-gray-400 text-xs leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* オンライン対局モックUI */}
+          <div className="bg-gray-900/60 border border-blue-700/30 rounded-2xl p-5 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-xs text-gray-400">オンライン対局ロビー</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: '10秒', sub: '秒読みのみ', color: 'from-blue-900/60 to-blue-950', border: 'border-blue-700/60' },
+                { label: '3分',  sub: '',           color: 'from-blue-900/60 to-blue-950', border: 'border-blue-700/60' },
+                { label: '10分', sub: '',           color: 'from-blue-900/60 to-blue-950', border: 'border-blue-700/60' },
+              ].map(p => (
+                <div key={p.label}
+                  className={`flex flex-col items-center justify-center py-4 rounded-xl bg-gradient-to-b ${p.color} border ${p.border}`}>
+                  <span className="text-xl font-black text-white">{p.label}</span>
+                  <span className="text-[10px] text-blue-400 mt-0.5">将棋</span>
+                  {p.sub && <span className="text-[10px] text-gray-500 mt-0.5">{p.sub}</span>}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <div className="flex-1 h-px bg-gray-800" />
+              <span className="text-xs text-gray-600">友達タブからフレンドと対局</span>
+              <div className="flex-1 h-px bg-gray-800" />
+            </div>
+            <div className="mt-3 flex items-center gap-3 bg-gray-800/60 rounded-xl px-4 py-2.5">
+              <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">友</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-gray-100">友達のユーザー名</div>
+                <div className="text-xs text-gray-400">R1620 · <span className="text-green-400">オンライン</span></div>
+              </div>
+              <div className="px-3 py-1 bg-blue-600 rounded-lg text-xs text-white font-bold flex-shrink-0">対局</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4
+                          bg-blue-900/20 border border-blue-700/30 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-blue-400 text-xs font-bold">✓</span>
+              </div>
+              <div>
+                <p className="text-blue-300 font-semibold text-sm mb-0.5">無料アカウントで今すぐ始められます</p>
+                <p className="text-gray-400 text-xs leading-relaxed">
+                  登録後すぐにクイックマッチ可能。観戦はアカウントなしでも利用できます。
+                </p>
+              </div>
+            </div>
+            <Link to="/online"
+              className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl
+                         bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold
+                         transition-all shadow-lg shadow-blue-600/30 hover:scale-105">
+              <Users size={15} />
+              対局へ進む
             </Link>
           </div>
         </div>

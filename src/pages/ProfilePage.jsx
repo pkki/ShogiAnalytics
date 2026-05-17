@@ -110,18 +110,17 @@ function onlineMovesToParsedMoves(moves) {
   for (let i = 0; i < moves.length; i++) {
     const move   = moves[i];
     const player = i % 2 === 0 ? 1 : 2;
-    const prefix = player === 1 ? '▲' : '△';
     const [toR, toC] = move.to;
     let label;
     if (move.piece) {
-      label = `${prefix}${FILES[toC]}${RANKS[toR]}${PIECE_CHAR[move.piece] || move.piece}打`;
+      label = `${FILES[toC]}${RANKS[toR]}${PIECE_CHAR[move.piece] || move.piece}打`;
     } else if (move.from) {
       const [fr, fc] = move.from;
       const piece = board[fr][fc];
       const ch = piece ? (PIECE_CHAR[piece.type] || piece.type) : '?';
-      label = `${prefix}${FILES[toC]}${RANKS[toR]}${ch}${move.promote ? '成' : ''}`;
+      label = `${FILES[toC]}${RANKS[toR]}${ch}${move.promote ? '成' : ''}`;
     } else {
-      label = `${prefix}${FILES[toC]}${RANKS[toR]}?`;
+      label = `${FILES[toC]}${RANKS[toR]}?`;
     }
     const result = applyMoveToState(board, hands, move, player);
     board = result.board;

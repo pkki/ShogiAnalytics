@@ -12,6 +12,7 @@ import {
   PIECE_KANJI,
 } from '../state/gameState';
 import { getGrade, formatTime } from '../utils/shogiRating';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
 import AccountMenu from '../components/AccountMenu';
 import TsumeNav from '../components/TsumeNav';
 
@@ -93,6 +94,155 @@ function makeClockInit(timeControl, byoyomiSeconds, byoyomi) {
 
 const REASON_LABEL = { resign:'投了', timeout:'時間切れ', checkmate:'詰み', disconnect:'切断' };
 
+// ─── リプレイ用定数・ユーティリティ ─────────────────────────
+const _PIECE_CHAR = {
+  P:'歩', L:'香', N:'桂', S:'銀', G:'金', B:'角', R:'飛', K:'玉',
+  '+P':'と', '+L':'杏', '+N':'圭', '+S':'全', '+B':'馬', '+R':'竜',
+};
+const _HAND_ORDER = ['R','B','G','S','N','L','P'];
+const _FILES = ['９','８','７','６','５','４','３','２','１'];
+const _RANKS = ['一','二','三','四','五','六','七','八','九'];
+const _INIT_BOARD = [
+  [{type:'L',player:2},{type:'N',player:2},{type:'S',player:2},{type:'G',player:2},{type:'K',player:2},{type:'G',player:2},{type:'S',player:2},{type:'N',player:2},{type:'L',player:2}],
+  [null,{type:'R',player:2},null,null,null,null,null,{type:'B',player:2},null],
+  Array(9).fill(null).map(()=>({type:'P',player:2})),
+  Array(9).fill(null),Array(9).fill(null),Array(9).fill(null),
+  Array(9).fill(null).map(()=>({type:'P',player:1})),
+  [null,{type:'B',player:1},null,null,null,null,null,{type:'R',player:1},null],
+  [{type:'L',player:1},{type:'N',player:1},{type:'S',player:1},{type:'G',player:1},{type:'K',player:1},{type:'G',player:1},{type:'S',player:1},{type:'N',player:1},{type:'L',player:1}],
+];
+function _applyMove(board, hands, move, player) {
+  const nb = board.map(r => r.map(c => c ? { ...c } : null));
+  const nh = { 1: { ...hands[1] }, 2: { ...hands[2] } };
+  const [toR, toC] = move.to;
+  if (move.from) {
+    const [fr, fc] = move.from;
+    const piece = nb[fr][fc];
+    if (!piece) return { board: nb, hands: nh };
+    const target = nb[toR][toC];
+    if (target) { const b = target.type.startsWith('+') ? target.type.slice(1) : target.type; nh[player][b] = (nh[player][b] || 0) + 1; }
+    nb[fr][fc] = null;
+    nb[toR][toC] = { type: move.promote ? '+' + (piece.type.startsWith('+') ? piece.type.slice(1) : piece.type) : piece.type, player };
+  } else if (move.piece) {
+    nh[player][move.piece] = Math.max(0, (nh[player][move.piece] || 0) - 1);
+    nb[toR][toC] = { type: move.piece, player };
+  }
+  return { board: nb, hands: nh };
+}
+function _computeStates(moves) {
+  const states = [{ board: _INIT_BOARD.map(r => r.map(c => c ? { ...c } : null)), hands: { 1: {}, 2: {} } }];
+  for (let i = 0; i < moves.length; i++) {
+    states.push(_applyMove(states[i].board, states[i].hands, moves[i], i % 2 === 0 ? 1 : 2));
+  }
+  return states;
+}
+function _movesToParsedMoves(moves) {
+  let board = _INIT_BOARD.map(r => r.map(c => c ? { ...c } : null));
+  let hands = { 1: {}, 2: {} };
+  return moves.map((move, i) => {
+    const player = i % 2 === 0 ? 1 : 2;
+    const [toR, toC] = move.to;
+    let label;
+    if (move.piece) {
+      label = `${_FILES[toC]}${_RANKS[toR]}${_PIECE_CHAR[move.piece] || move.piece}打`;
+    } else if (move.from) {
+      const [fr, fc] = move.from;
+      const piece = board[fr][fc];
+      const ch = piece ? (_PIECE_CHAR[piece.type] || piece.type) : '?';
+      label = `${_FILES[toC]}${_RANKS[toR]}${ch}${move.promote ? '成' : ''}`;
+    } else {
+      label = `${_FILES[toC]}${_RANKS[toR]}?`;
+    }
+    const result = _applyMove(board, hands, move, player);
+    board = result.board; hands = result.hands;
+    return { moveNumber: i + 1, label, from: move.from || null, to: move.to, promote: move.promote || false, dropPiece: move.piece || null };
+  });
+}
+
+// ─── HandRow (リプレイ用) ─────────────────────────────────────
+function _HandRow({ hands, player, name, flip }) {
+  const h = hands[player] || {};
+  const pieces = _HAND_ORDER.filter(t => (h[t] || 0) > 0);
+  return (
+    <div className={`flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 min-h-[36px] ${flip ? 'flex-row-reverse' : ''}`}>
+      <span className="text-[10px] text-gray-500 shrink-0">{name}</span>
+      <span className="text-[10px] text-gray-600 shrink-0">持</span>
+      {pieces.length === 0
+        ? <span className="text-[10px] text-gray-600">なし</span>
+        : pieces.map(t => (
+            <span key={t} className="inline-flex items-center gap-0.5">
+              <span style={{ fontWeight:900, fontSize:13, color:'#111', background:'#e8c96a', borderRadius:3, padding:'1px 3px', display:'inline-block', transform: flip ? 'rotate(180deg)' : 'none', lineHeight:1.2 }}>
+                {_PIECE_CHAR[t] || t}
+              </span>
+              {h[t] > 1 && <span className="text-[10px] text-gray-400">{h[t]}</span>}
+            </span>
+          ))
+      }
+    </div>
+  );
+}
+
+// ─── ReplayViewer ─────────────────────────────────────────────
+function ReplayViewer({ game, onClose, onAnalyze }) {
+  const moves = useMemo(() => { try { return game.moves ? JSON.parse(game.moves) : []; } catch { return []; } }, [game.moves]);
+  const states = useMemo(() => _computeStates(moves), [moves]);
+  const [idx, setIdx] = useState(0);
+  const { board, hands } = states[idx];
+  const senteName = game.sente_name || game.sente_email?.split('@')[0] || '先手';
+  const goteName  = game.gote_name  || game.gote_email?.split('@')[0]  || '後手';
+  const date = game.finished_at ? new Date(game.finished_at * 1000).toLocaleDateString('ja-JP') : '';
+  const btnBase = 'p-1.5 rounded text-gray-400 hover:text-white transition-colors disabled:opacity-25 disabled:cursor-not-allowed';
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft')  setIdx(i => Math.max(0, i - 1));
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(states.length - 1, i + 1));
+      if (e.key === 'Escape')     onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [states.length, onClose]);
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2" onClick={onClose}>
+      <div className="bg-gray-900 rounded-2xl w-full max-w-sm max-h-[95vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 shrink-0">
+          <div className="text-sm leading-tight">
+            <span className="font-bold text-white">{goteName}</span>
+            <span className="text-gray-500 mx-1.5 text-xs">後手</span>
+            <span className="text-gray-600 mx-1">vs</span>
+            <span className="text-gray-500 mx-1.5 text-xs">先手</span>
+            <span className="font-bold text-white">{senteName}</span>
+            {date && <span className="text-gray-600 text-xs ml-2">{date}</span>}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white ml-2 shrink-0 transition-colors"><X size={18} /></button>
+        </div>
+        <_HandRow hands={hands} player={2} name={goteName} flip />
+        <div style={{ containerType:'inline-size' }} className="px-2 shrink-0">
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gridTemplateRows:'repeat(9,1fr)', aspectRatio:'9/10', border:'2px solid #92400e' }}>
+            {board.flatMap((row, r) => row.map((piece, c) => (
+              <div key={`${r}-${c}`} style={{ background:'#e8c96a', borderRight:'1px solid #92400e30', borderBottom:'1px solid #92400e30' }} className="flex items-center justify-center overflow-hidden">
+                {piece && (
+                  <span style={{ fontSize:'9cqw', fontWeight:900, color: piece.type.startsWith('+') ? '#c00' : '#111', transform: piece.player === 2 ? 'rotate(180deg)' : 'none', lineHeight:1, display:'block' }}>
+                    {_PIECE_CHAR[piece.type] || piece.type}
+                  </span>
+                )}
+              </div>
+            )))}
+          </div>
+        </div>
+        <_HandRow hands={hands} player={1} name={senteName} flip={false} />
+        <div className="flex items-center justify-center gap-1 px-3 py-2 border-t border-gray-700 shrink-0">
+          <button onClick={() => setIdx(0)} disabled={idx === 0} className={btnBase}><ChevronsLeft size={16} /></button>
+          <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} className={btnBase}><ChevronLeft size={16} /></button>
+          <span className="text-xs text-gray-400 w-20 text-center tabular-nums">{idx === 0 ? '初期局面' : `${idx} / ${moves.length}手`}</span>
+          <button onClick={() => setIdx(i => Math.min(states.length - 1, i + 1))} disabled={idx === states.length - 1} className={btnBase}><ChevronRight size={16} /></button>
+          <button onClick={() => setIdx(states.length - 1)} disabled={idx === states.length - 1} className={btnBase}><ChevronsRight size={16} /></button>
+          <button onClick={onAnalyze} className="ml-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs text-white font-bold transition-colors shrink-0">解析する</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TIME_OPTIONS = [
   { label:'1分',  val:60  },
   { label:'3分',  val:180 },
@@ -110,6 +260,17 @@ const BYO_OPTIONS = [
 export default function OnlineLobbyPage() {
   const navigate = useNavigate();
 
+  function navigateToAnalysis(g) {
+    try {
+      const moves = g.moves ? JSON.parse(g.moves) : [];
+      const parsedMoves = _movesToParsedMoves(moves);
+      const senteName = g.sente_name || g.sente_email?.split('@')[0] || '先手';
+      const goteName  = g.gote_name  || g.gote_email?.split('@')[0]  || '後手';
+      sessionStorage.setItem('shogi_online_replay', JSON.stringify({ parsedMoves, senteName, goteName }));
+      navigate('/app');
+    } catch (e) { console.error(e); }
+  }
+
   const jwt    = localStorage.getItem('shogi_jwt') || '';
   const me     = useMemo(() => parseJwt(jwt), [jwt]);
   const userId = me?.userId ?? '';
@@ -123,9 +284,24 @@ export default function OnlineLobbyPage() {
   const [leaderboard,    setLeaderboard]    = useState([]);
   const [history,        setHistory]        = useState([]);
   const [activeGamesList, setActiveGamesList] = useState([]);
+  const [replayGame,     setReplayGame]     = useState(null);
+
+  // ─── 友達 ────────────────────────────────────────────────
+  const [friends,          setFriends]          = useState([]);
+  const [pendingReceived,  setPendingReceived]  = useState([]);
+  const [pendingSent,      setPendingSent]      = useState([]);
+  const [friendSearch,     setFriendSearch]     = useState('');
+  const [friendResults,    setFriendResults]    = useState([]);
+  const [friendSearching,  setFriendSearching]  = useState(false);
+  const [friendsLoading,   setFriendsLoading]   = useState(false);
+  const [incomingInvite,   setIncomingInvite]   = useState(null);  // { inviteId, fromId, fromName, fromRating, config }
+  const [invitePending,    setInvitePending]    = useState(false); // 送信後・相手の返事待ち
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteTarget,     setInviteTarget]     = useState(null);  // { userId, displayName, rating }
+  const [inviteConfig,     setInviteConfig]     = useState({ timeControl: 600, byoyomi: 0, byoyomiSeconds: 30, rated: false });
 
   // ─── ロビー UI 状態 ────────────────────────────────────────
-  const [lobbyTab,       setLobbyTab]       = useState('quick');  // 'quick'|'wait'|'watch'|'rank'|'history'
+  const [lobbyTab,       setLobbyTab]       = useState('quick');  // 'quick'|'wait'|'watch'|'rank'|'history'|'friends'
   const [showWaitModal,  setShowWaitModal]  = useState(false);
   const [waitSettings,   setWaitSettings]   = useState({ timeControl: 600, byoyomi: 0, byoyomiSeconds: 30 });
   const [inWaitList,     setInWaitList]     = useState(false);
@@ -226,6 +402,8 @@ export default function OnlineLobbyPage() {
       setSelectedCell(null); setDropSelected(null); setHighlightSet(new Set());
       setGameOver(null); setOppReconnecting(null);
       setQuickMatchKey(null);
+      setInvitePending(false);
+      setIncomingInvite(null);
       sessionStorage.setItem('shogi_online_game', 'true');
       setView('game');
     });
@@ -321,6 +499,14 @@ export default function OnlineLobbyPage() {
     socket.on('challenge_failed', () => alert('相手がすでに対局を開始しました'));
 
     socket.on('active_games', ({ list }) => setActiveGamesList(list || []));
+
+    socket.on('friend_invite_received', (data) => setIncomingInvite(data));
+    socket.on('friend_invite_rejected', ({ toName }) => {
+      setInvitePending(false);
+      alert(`${toName}さんに断られました`);
+    });
+    socket.on('friend_invite_timeout', () => setInvitePending(false));
+    socket.on('friend_invite_error',   ({ error }) => { setInvitePending(false); alert(error); });
 
     socket.on('spectate_joined', (data) => {
       setSpectateGame(data);
@@ -580,6 +766,75 @@ export default function OnlineLobbyPage() {
     socketRef.current?.emit('spectate', { gameId });
   };
 
+  // ─── 友達 API ─────────────────────────────────────────────
+  const fetchFriends = async () => {
+    setFriendsLoading(true);
+    try {
+      const r = await fetch(`${API}/api/friends`, { headers: { Authorization: `Bearer ${jwt}` } });
+      const d = await r.json();
+      if (d.ok) { setFriends(d.friends || []); setPendingReceived(d.pendingReceived || []); setPendingSent(d.pendingSent || []); }
+    } catch {} finally { setFriendsLoading(false); }
+  };
+
+  const searchUsers = async (q) => {
+    if (!q.trim()) { setFriendResults([]); return; }
+    setFriendSearching(true);
+    try {
+      const r = await fetch(`${API}/api/friends/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${jwt}` } });
+      const d = await r.json();
+      if (d.ok) setFriendResults(d.users || []);
+    } catch {} finally { setFriendSearching(false); }
+  };
+
+  const sendFriendRequest = async (toId) => {
+    const r = await fetch(`${API}/api/friends/request`, {
+      method: 'POST', headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toId }),
+    });
+    const d = await r.json();
+    if (d.ok) { fetchFriends(); searchUsers(friendSearch); }
+    else alert(d.error);
+  };
+
+  const respondFriendRequest = async (fromId, action) => {
+    const r = await fetch(`${API}/api/friends/respond`, {
+      method: 'POST', headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromId, action }),
+    });
+    const d = await r.json();
+    if (d.ok) fetchFriends();
+    else alert(d.error);
+  };
+
+  const removeFriend = async (friendId, name) => {
+    if (!window.confirm(`${name}さんを友達から削除しますか？`)) return;
+    const r = await fetch(`${API}/api/friends/${friendId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${jwt}` },
+    });
+    const d = await r.json();
+    if (d.ok) fetchFriends();
+    else alert(d.error);
+  };
+
+  const sendGameInvite = () => {
+    if (!inviteTarget || !socketRef.current) return;
+    socketRef.current.emit('friend_invite', { toId: inviteTarget.userId, config: inviteConfig });
+    setShowInviteDialog(false);
+    setInvitePending(true);
+  };
+
+  const acceptInvite = () => {
+    if (!incomingInvite || !socketRef.current) return;
+    socketRef.current.emit('friend_invite_accept', { inviteId: incomingInvite.inviteId });
+    setIncomingInvite(null);
+  };
+
+  const rejectInvite = () => {
+    if (!incomingInvite || !socketRef.current) return;
+    socketRef.current.emit('friend_invite_reject', { inviteId: incomingInvite.inviteId });
+    setIncomingInvite(null);
+  };
+
   const handleLeaveSpectate = () => {
     socketRef.current?.emit('leave_spectate', { gameId: spectateGame?.gameId ?? spectateGame?.id });
     setView('lobby');
@@ -593,6 +848,11 @@ export default function OnlineLobbyPage() {
   const oppColorNum  = myColorNum === 1 ? 2 : 1;
   const oppInfo      = myColor === 'sente' ? game?.gote : game?.sente;
   const myInfo       = myColor === 'sente' ? game?.sente : game?.gote;
+
+  // 友達タブを開いたときに最新状態を取得
+  useEffect(() => {
+    if (lobbyTab === 'friends' && jwt) fetchFriends();
+  }, [lobbyTab]); // eslint-disable-line
 
   const handleLogout = () => {
     localStorage.removeItem('shogi_jwt');
@@ -968,9 +1228,11 @@ export default function OnlineLobbyPage() {
         <AccountMenu email={userEmail} userId={userId} isAdmin={isAdmin} onLogout={handleLogout} />
       </div>
 
-      <div className="lg:pl-64 pb-20 lg:pb-4 max-w-5xl mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="lg:pl-64 pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto p-4 lg:p-6 lg:flex lg:gap-8 lg:items-start">
+
         {/* 左: 自分のR */}
-        <div className="space-y-4">
+        <div className="lg:w-56 lg:shrink-0 space-y-4 mb-4 lg:mb-0">
           <div className="bg-gray-900 rounded-xl border border-gray-700 p-5 text-center">
             <div className="text-gray-400 text-xs mb-1">あなたのレーティング</div>
             <div className="text-4xl font-black text-white">{myRating}</div>
@@ -996,11 +1258,11 @@ export default function OnlineLobbyPage() {
         </div>
 
         {/* 右: タブ */}
-        <div className="md:col-span-2">
-          <div className="flex border-b border-gray-800 mb-4 overflow-x-auto">
-            {[['quick','クイックマッチ'],['wait','待ち受け一覧'],['watch','観戦'],['rank','ランキング'],['history','対局履歴']].map(([t,l])=>(
+        <div className="flex-1 min-w-0">
+          <div className="flex border-b border-gray-800 mb-5 overflow-x-auto">
+            {[['quick','クイックマッチ'],['wait','待ち受け一覧'],['friends','友達'],['watch','観戦'],['rank','ランキング'],['history','対局履歴']].map(([t,l])=>(
               <button key={t} onClick={() => setLobbyTab(t)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
+                className={`px-4 lg:px-6 py-3 text-sm lg:text-base font-medium border-b-2 whitespace-nowrap transition-colors
                   ${lobbyTab===t?'border-blue-500 text-white':'border-transparent text-gray-500 hover:text-gray-300'}`}>
                 {l}
               </button>
@@ -1030,18 +1292,18 @@ export default function OnlineLobbyPage() {
 
               {/* プリセットボタン */}
               {!activePreset && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4 lg:gap-6">
                   {QUICK_MATCH.map((preset) => (
                     <button key={preset.key} onClick={() => handleQuickMatch(preset)}
-                      className="flex flex-col items-center justify-center py-6 rounded-2xl
+                      className="flex flex-col items-center justify-center py-8 lg:py-14 rounded-2xl
                                  bg-gradient-to-b from-blue-900/60 to-blue-950 border border-blue-700/60
                                  hover:from-blue-800/80 hover:border-blue-500 transition-all group">
-                      <span className="text-2xl font-black text-white group-hover:text-blue-200">
+                      <span className="text-3xl lg:text-5xl font-black text-white group-hover:text-blue-200">
                         {preset.label}
                       </span>
-                      <span className="text-[10px] text-blue-400 mt-1">将棋</span>
+                      <span className="text-xs lg:text-sm text-blue-400 mt-1.5">将棋</span>
                       {preset.desc && (
-                        <span className="text-[10px] text-gray-500 mt-0.5">{preset.desc}</span>
+                        <span className="text-xs text-gray-500 mt-0.5">{preset.desc}</span>
                       )}
                     </button>
                   ))}
@@ -1099,6 +1361,126 @@ export default function OnlineLobbyPage() {
                   </tbody>
                 </table>
               )}
+            </div>
+          )}
+
+          {/* 友達 */}
+          {lobbyTab==='friends' && (
+            <div className="space-y-5">
+              {/* ユーザー検索 */}
+              <div>
+                <div className="text-xs text-gray-400 mb-2 font-medium">ユーザーを検索</div>
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    placeholder="表示名で検索..."
+                    value={friendSearch}
+                    onChange={e => { setFriendSearch(e.target.value); searchUsers(e.target.value); }}
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+                  />
+                  {friendSearching && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"/>}
+                </div>
+                {friendResults.length > 0 && (
+                  <div className="space-y-2">
+                    {friendResults.map(u => (
+                      <div key={u.userId} className="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ backgroundColor: u.avatarColor }}>
+                          {(u.displayName||'?')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-100 truncate">{u.displayName}</div>
+                          <div className="text-xs text-gray-400">R{u.rating}</div>
+                        </div>
+                        {u.friendStatus === 'none' && (
+                          <button onClick={() => sendFriendRequest(u.userId)} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs text-white font-bold transition-colors flex-shrink-0">申請</button>
+                        )}
+                        {u.friendStatus === 'pending_sent' && <span className="text-xs text-gray-400 flex-shrink-0">申請中</span>}
+                        {u.friendStatus === 'pending_received' && (
+                          <button onClick={() => respondFriendRequest(u.userId, 'accept')} className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded-lg text-xs text-white font-bold transition-colors flex-shrink-0">承認</button>
+                        )}
+                        {u.friendStatus === 'friends' && <span className="text-xs text-green-400 flex-shrink-0">友達</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 受信した申請 */}
+              {pendingReceived.length > 0 && (
+                <div>
+                  <div className="text-xs text-yellow-400 mb-2 font-medium">友達リクエスト ({pendingReceived.length})</div>
+                  <div className="space-y-2">
+                    {pendingReceived.map(u => (
+                      <div key={u.userId} className="flex items-center gap-3 bg-gray-800/60 border border-yellow-600/30 rounded-lg px-3 py-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ backgroundColor: u.avatarColor }}>
+                          {(u.displayName||'?')[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-100 truncate">{u.displayName}</div>
+                          <div className="text-xs text-gray-400">R{u.rating}</div>
+                        </div>
+                        <button onClick={() => respondFriendRequest(u.userId, 'accept')} className="px-2 py-1 bg-green-600 hover:bg-green-500 rounded-lg text-xs text-white font-bold transition-colors flex-shrink-0">承認</button>
+                        <button onClick={() => respondFriendRequest(u.userId, 'reject')} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs text-gray-300 transition-colors flex-shrink-0">拒否</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 友達一覧 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs text-gray-400 font-medium">友達 ({friends.length})</div>
+                  <button onClick={fetchFriends} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">更新</button>
+                </div>
+                {friendsLoading && <div className="text-xs text-gray-500 text-center py-4">読み込み中...</div>}
+                {!friendsLoading && friends.length === 0 && (
+                  <div className="text-sm text-gray-500 text-center py-6">まだ友達がいません<br/><span className="text-xs">上の検索で友達を追加しましょう</span></div>
+                )}
+                <div className="space-y-2">
+                  {friends.map(u => (
+                    <div key={u.userId} className="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: u.avatarColor }}>
+                          {(u.displayName||'?')[0]}
+                        </div>
+                        <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-800 ${u.online ? 'bg-green-400' : 'bg-gray-600'}`}/>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-gray-100 truncate">{u.displayName}</div>
+                        <div className="text-xs text-gray-400">R{u.rating} · {u.online ? <span className="text-green-400">オンライン</span> : 'オフライン'}</div>
+                      </div>
+                      {u.online && view !== 'game' && (
+                        <button
+                          onClick={() => { setInviteTarget(u); setShowInviteDialog(true); }}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs text-white font-bold transition-colors flex-shrink-0"
+                        >
+                          対局
+                        </button>
+                      )}
+                      <button onClick={() => removeFriend(u.userId, u.displayName)} className="p-1 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0" title="友達を削除">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 送信済み申請 */}
+                {pendingSent.length > 0 && (
+                  <div className="mt-4">
+                    <div className="text-xs text-gray-500 mb-2">申請中 ({pendingSent.length})</div>
+                    {pendingSent.map(u => (
+                      <div key={u.userId} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: u.avatarColor }}>
+                          {(u.displayName||'?')[0]}
+                        </div>
+                        <span className="text-gray-400 flex-1 truncate">{u.displayName}</span>
+                        <span className="text-xs text-gray-600">承認待ち</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1175,21 +1557,117 @@ export default function OnlineLobbyPage() {
                 const myRole = isSente ? 'sente' : 'gote';
                 const won   = g.winner === myRole;
                 const delta = (myRA??myR) - myR;
+                const hasMoves = !!g.moves;
                 return (
-                  <div key={g.id} className="flex items-center gap-3 bg-gray-800/60 rounded px-3 py-2 text-sm">
-                    <span className={`font-bold w-8 ${won?'text-yellow-400':'text-red-400'}`}>{won?'勝':'負'}</span>
-                    <span className="flex-1 text-gray-300 text-xs truncate">{opp?.split('@')[0]}</span>
-                    <span className="text-gray-500 text-xs">{REASON_LABEL[g.reason]??g.reason}</span>
-                    <span className={`font-mono font-bold text-xs ${delta>=0?'text-green-400':'text-red-400'}`}>
-                      {delta>=0?'+':''}{delta}
-                    </span>
+                  <div key={g.id} className="bg-gray-800/60 rounded px-3 py-2 text-sm">
+                    <div className="flex items-center gap-3">
+                      <span className={`font-bold w-8 shrink-0 ${won?'text-yellow-400':'text-red-400'}`}>{won?'勝':'負'}</span>
+                      <span className="flex-1 text-gray-300 text-xs truncate">{opp?.split('@')[0]}</span>
+                      <span className="text-gray-500 text-xs shrink-0">{REASON_LABEL[g.reason]??g.reason}</span>
+                      <span className={`font-mono font-bold text-xs shrink-0 ${delta>=0?'text-green-400':'text-red-400'}`}>
+                        {delta>=0?'+':''}{delta}
+                      </span>
+                    </div>
+                    {hasMoves && (
+                      <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-700/60">
+                        <button onClick={() => setReplayGame(g)}
+                          className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition-colors">
+                          棋譜を見る
+                        </button>
+                        <button onClick={() => navigateToAnalysis(g)}
+                          className="px-3 py-1 rounded-lg bg-blue-700 hover:bg-blue-600 text-xs text-white font-bold transition-colors">
+                          解析する
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+        </div>
       </div>
+
+      {replayGame && (
+        <ReplayViewer
+          game={replayGame}
+          onClose={() => setReplayGame(null)}
+          onAnalyze={() => { setReplayGame(null); navigateToAnalysis(replayGame); }}
+        />
+      )}
+
+      {/* 友達対局招待ダイアログ */}
+      {showInviteDialog && inviteTarget && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowInviteDialog(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-white mb-4">{inviteTarget.displayName}さんに対局を申し込む</h3>
+            <div className="space-y-3 mb-5">
+              <div>
+                <div className="text-xs text-gray-400 mb-1.5">持ち時間</div>
+                <div className="flex gap-2 flex-wrap">
+                  {TIME_OPTIONS.map(o => (
+                    <button key={o.val} onClick={() => setInviteConfig(c => ({ ...c, timeControl: o.val }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${inviteConfig.timeControl === o.val ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400 mb-1.5">秒読み</div>
+                <div className="flex gap-2 flex-wrap">
+                  {BYO_OPTIONS.map(o => (
+                    <button key={o.val} onClick={() => setInviteConfig(c => ({ ...c, byoyomi: o.val > 0 ? 1 : 0, byoyomiSeconds: o.val }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${inviteConfig.byoyomiSeconds === o.val ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" checked={inviteConfig.rated} onChange={e => setInviteConfig(c => ({ ...c, rated: e.target.checked }))}
+                  className="w-4 h-4 accent-blue-500"/>
+                <span className="text-sm text-gray-300">レーティング対局にする</span>
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowInviteDialog(false)} className="flex-1 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm transition-colors">キャンセル</button>
+              <button onClick={sendGameInvite} className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">申し込む</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 招待送信中オーバーレイ */}
+      {invitePending && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-8 text-center shadow-2xl">
+            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"/>
+            <div className="text-white font-bold mb-1">対局の申し込みを送りました</div>
+            <div className="text-gray-400 text-sm mb-5">相手の承認を待っています…</div>
+            <button onClick={() => setInvitePending(false)} className="px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 text-sm transition-colors">キャンセル</button>
+          </div>
+        </div>
+      )}
+
+      {/* 友達からの対局招待ポップアップ */}
+      {incomingInvite && view !== 'game' && (
+        <div className="fixed bottom-4 left-0 right-0 flex justify-center z-50 px-4">
+          <div className="bg-gray-800 border border-blue-500/60 rounded-xl p-4 max-w-sm w-full shadow-2xl">
+            <div className="text-white font-bold mb-0.5">{incomingInvite.fromName}さんから対局の申し込み</div>
+            <div className="text-gray-400 text-xs mb-3">
+              持ち時間: {incomingInvite.config?.timeControl ? `${Math.floor(incomingInvite.config.timeControl/60)}分` : '—'}
+              {incomingInvite.config?.byoyomiSeconds > 0 && ` / 秒読み: ${incomingInvite.config.byoyomiSeconds}秒`}
+              {incomingInvite.config?.rated ? ' · レーティング対局' : ' · フリー対局'}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={rejectInvite} className="flex-1 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-bold transition-colors">断る</button>
+              <button onClick={acceptInvite} className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">受ける</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
