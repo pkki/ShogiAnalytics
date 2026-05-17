@@ -6,7 +6,7 @@
 // ============================================================
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Smartphone, Settings, Info, User, ShieldCheck } from 'lucide-react';
+import { Smartphone, Settings, Info, User, ShieldCheck, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ANDROID_DOWNLOAD_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL || '';
@@ -67,6 +67,15 @@ export default function AccountMenu({ email, userId, isAdmin, onLogout, onShowSh
                 {t('accountMenu.myProfile')}
               </Link>
             )}
+            <Link
+              to="/online"
+              onClick={() => setOpen(false)}
+              className="w-full text-left px-3 py-2 rounded hover:bg-gray-800
+                         text-gray-200 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <Globe size={13} className="text-gray-400" />
+              オンライン対局
+            </Link>
             {isAdmin && (
               <Link
                 to="/admin"

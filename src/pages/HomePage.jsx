@@ -414,6 +414,9 @@ export default function HomePage() {
             <Link to="/tsume/category/all" className="text-xs text-amber-400 hover:text-amber-300 transition-colors tracking-wide font-medium">
               {t('nav.tsumeList')}
             </Link>
+            <Link to="/online" className="text-xs text-blue-400 hover:text-blue-300 transition-colors tracking-wide font-medium">
+              オンライン対局
+            </Link>
           </nav>
 
           {/* 右側コントロール */}
@@ -478,6 +481,10 @@ export default function HomePage() {
             <Link to="/tsume/category/all" onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium">
               <Swords size={14} />{t('nav.tsumeList')}
+            </Link>
+            <Link to="/online" onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 px-3 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium">
+              オンライン対局
             </Link>
             <div className="border-t border-gray-800 mt-1 pt-3 flex flex-col gap-2">
               {isLoggedIn ? (

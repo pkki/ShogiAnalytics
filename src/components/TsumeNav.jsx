@@ -6,7 +6,7 @@
  */
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, User, LayoutGrid, Home, Languages } from 'lucide-react';
+import { BookOpen, User, LayoutGrid, Home, Languages, Globe } from 'lucide-react';
 
 function parseUserId() {
   try {
@@ -32,6 +32,11 @@ function NavLinks({ userId, onClose }) {
       label: t('nav.profile'),
       to:    `/profile/${userId}`,
     }] : []),
+    {
+      icon:  Globe,
+      label: t('nav.online'),
+      to:    '/online',
+    },
     {
       icon:  LayoutGrid,
       label: t('nav.mainApp'),
@@ -87,10 +92,11 @@ export default function TsumeNav() {
   const toggleLang = () => i18n.changeLanguage(isJa ? 'en' : 'ja');
 
   const tabItems = [
-    { icon: Home,       label: t('nav.home'), to: '/' },
-    { icon: BookOpen,   label: t('nav.tsume'),    to: '/tsume/category/all' },
+    { icon: Home,       label: t('nav.home'),    to: '/' },
+    { icon: BookOpen,   label: t('nav.tsume'),   to: '/tsume/category/all' },
     ...(userId ? [{ icon: User, label: t('nav.profile'), to: `/profile/${userId}` }] : []),
-    { icon: LayoutGrid, label: t('nav.mainApp'),  to: '/app' },
+    { icon: Globe,      label: t('nav.online'),  to: '/online' },
+    { icon: LayoutGrid, label: t('nav.mainApp'), to: '/app' },
   ];
 
   return (

@@ -18,7 +18,8 @@
     "tsumeList": "最新の詰将棋一覧",
     "openMenu": "メニューを開く",
     "closeMenu": "メニューを閉じる",
-    "home": "ホーム"
+    "home": "ホーム",
+    "online": "オンライン対戦"
   },
 
   "header": {

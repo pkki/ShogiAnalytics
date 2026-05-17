@@ -15,6 +15,7 @@ import TermsPage from './pages/TermsPage.jsx'
 import PrivacyPage from './pages/PrivacyPage.jsx'
 import AdminTrainingPage from './pages/AdminTrainingPage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
+import OnlineLobbyPage from './pages/OnlineLobbyPage.jsx'
 
 function isPWAOrAPK() {
   // PWA standalone / fullscreen、またはAndroid APK (TWA) の判定
@@ -29,6 +30,13 @@ function RootPage() {
   return <HomePage />;
 }
 
+function RequireNoActiveGame({ children }) {
+  if (sessionStorage.getItem('shogi_online_game') === 'true') {
+    return <Navigate to="/online" replace />;
+  }
+  return children;
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <HelmetProvider>
@@ -36,15 +44,16 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<RootPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/app" element={<App />} />
-        <Route path="/share/:token" element={<SharePage />} />
-        <Route path="/tsume/category/:moves" element={<TsumeListPage />} />
-        <Route path="/tsume/:token" element={<TsumePage />} />
-        <Route path="/profile/:userId" element={<ProfilePage />} />
+        <Route path="/app" element={<RequireNoActiveGame><App /></RequireNoActiveGame>} />
+        <Route path="/share/:token" element={<RequireNoActiveGame><SharePage /></RequireNoActiveGame>} />
+        <Route path="/tsume/category/:moves" element={<RequireNoActiveGame><TsumeListPage /></RequireNoActiveGame>} />
+        <Route path="/tsume/:token" element={<RequireNoActiveGame><TsumePage /></RequireNoActiveGame>} />
+        <Route path="/profile/:userId" element={<RequireNoActiveGame><ProfilePage /></RequireNoActiveGame>} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/admin/training" element={<AdminTrainingPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/online" element={<OnlineLobbyPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
