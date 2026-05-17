@@ -575,6 +575,9 @@ export default function App() {
   const [showMobileEvalBar,    setShowMobileEvalBar]    = useState(true);
   const [showMobileEvalGraph,  setShowMobileEvalGraph]  = useState(true);
   const [showMobileCandidates, setShowMobileCandidates] = useState(true);
+  const [showDesktopEvalBar,    setShowDesktopEvalBar]    = useState(true);
+  const [showDesktopEvalGraph,  setShowDesktopEvalGraph]  = useState(true);
+  const [showDesktopCandidates, setShowDesktopCandidates] = useState(true);
   const [showMobileMoveList,   setShowMobileMoveList]   = useState(false);
   const [mobileMoveListVisible, setMobileMoveListVisible] = useState(false);
 
@@ -1841,9 +1844,13 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     newOnes.forEach(f => {
       announcedFormationsRef.current.add(f);
       if (window.speechSynthesis) {
-        const utter = new SpeechSynthesisUtterance(f);
-        utter.lang = 'ja-JP';
-        window.speechSynthesis.speak(utter);
+        try {
+          const utter = new SpeechSynthesisUtterance(f);
+          utter.lang = 'ja-JP';
+          window.speechSynthesis.speak(utter);
+        } catch (e) {
+          console.warn('[formation] speechSynthesis error:', e);
+        }
       }
     });
 
@@ -2862,7 +2869,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   const navArea = (
     <>
       {gameControls}
-      {!gameInfoHidden && <EvaluationMeter evalValue={evalScore} />}
+      {!gameInfoHidden && showDesktopEvalBar && <EvaluationMeter evalValue={evalScore} />}
       <NavigationPanel
         currentMove={displayMove}
         totalMoves={state.mainLineIds.length - 1}
@@ -4161,6 +4168,30 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
               <div>
+                <div className="text-xs font-semibold text-gray-300 mb-3">表示設定</div>
+                <div className="flex flex-col gap-2">
+                  {([
+                    ['形勢バー',  showDesktopEvalBar,    setShowDesktopEvalBar],
+                    ['グラフ',    showDesktopEvalGraph,  setShowDesktopEvalGraph],
+                    ['候補手',    showDesktopCandidates, setShowDesktopCandidates],
+                  ]).map(([label, val, setter]) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <span className="text-xs text-gray-300">{label}</span>
+                      <button
+                        onClick={() => setter(v => !v)}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors
+                          ${val
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+                      >
+                        {val ? <Eye size={12} /> : <EyeOff size={12} />}
+                        {val ? '表示' : '非表示'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <div className="text-xs font-semibold text-gray-300 mb-3">候補手矢印の表示数</div>
                 <div className="flex gap-1.5">
                   {[0,1,2,3,4].map(n => (
@@ -4403,7 +4434,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
 
               {/* 形成グラフのみ */}
               <div className="flex flex-col flex-1 min-h-0 overflow-hidden pt-3 pb-2">
-                {!gameInfoHidden && (
+                {!gameInfoHidden && showDesktopEvalGraph && (
                   <EvaluationGraph
                     currentMove={isOnBranch ? branchPoint : mainLineIdx}
                     graphData={graphData}
@@ -4418,7 +4449,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
           </div>
 
           {/* ── 垂直ドラッグハンドル（上段 | 候補手） ── */}
-          {!gameInfoHidden && (
+          {!gameInfoHidden && showDesktopCandidates && (
             <DragHandle
               axis="y"
               onMouseDown={(e) => startDrag(e, panelSizes.candidatePx, (v) =>
@@ -4429,7 +4460,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
           )}
 
           {/* 下段: 候補手・読み筋 */}
-          {!gameInfoHidden && (
+          {!gameInfoHidden && showDesktopCandidates && (
             <div className="flex-shrink-0 overflow-hidden" style={{ height: panelSizes.candidatePx }}>
               <CandidateMoves
                 candidates={liveCandidates}
