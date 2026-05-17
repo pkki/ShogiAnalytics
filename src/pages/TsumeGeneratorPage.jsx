@@ -411,8 +411,12 @@ export default function TsumeGeneratorPage() {
     }
 
     if (genIdRef.current === myId) {
-      setPhase('idle'); setProgress(null);
-      setMessage('生成に失敗しました。エンジンが接続されているか確認してください。');
+      if (continuousModeRef.current) {
+        continuousTimerRef.current = setTimeout(() => generateRef.current?.(), 1000);
+      } else {
+        setPhase('idle'); setProgress(null);
+        setMessage('生成に失敗しました。エンジンが接続されているか確認してください。');
+      }
     }
   }
 
@@ -448,8 +452,12 @@ export default function TsumeGeneratorPage() {
         setLastMethod(data.method ?? null);
         publishPuzzle(data);
       } else {
-        setPhase('idle'); setProgress(null);
-        setMessage('生成に失敗しました。もう一度お試しください。');
+        if (continuousModeRef.current) {
+          continuousTimerRef.current = setTimeout(() => generateRef.current?.(), 1000);
+        } else {
+          setPhase('idle'); setProgress(null);
+          setMessage('生成に失敗しました。もう一度お試しください。');
+        }
       }
     });
   }
@@ -466,8 +474,12 @@ export default function TsumeGeneratorPage() {
     if (genIdRef.current !== myId) return;
 
     if (!jsData.ok) {
-      setPhase('idle'); setProgress(null);
-      setMessage('生成に失敗しました。もう一度お試しください。');
+      if (continuousModeRef.current) {
+        continuousTimerRef.current = setTimeout(() => generateRef.current?.(), 1000);
+      } else {
+        setPhase('idle'); setProgress(null);
+        setMessage('生成に失敗しました。もう一度お試しください。');
+      }
       return;
     }
 

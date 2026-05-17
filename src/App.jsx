@@ -1094,7 +1094,9 @@ export default function App() {
     () => import.meta.env.VITE_USE_WEBRTC === 'true' && !isWebRTCAvailable()
   );
   const [webrtcNoticeDismissed, setWebrtcNoticeDismissed] = useState(false);
-  const [useWebSocketFallback, setUseWebSocketFallback] = useState(false);
+  const [useWebSocketFallback, setUseWebSocketFallback] = useState(
+    () => localStorage.getItem('shogi_prefer_ws') === '1'
+  );
   // 棋譜共有
   const [shareUrl, setShareUrl]         = useState(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -4585,6 +4587,11 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
           settings={userSettings}
           onClose={() => setShowAccountSettings(false)}
           onSave={saveUserSettings}
+          preferWebSocket={useWebSocketFallback}
+          onToggleWebSocket={v => {
+            setUseWebSocketFallback(v);
+            localStorage.setItem('shogi_prefer_ws', v ? '1' : '0');
+          }}
         />
       )}
 

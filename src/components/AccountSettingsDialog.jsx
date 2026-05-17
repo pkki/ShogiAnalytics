@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2, Wifi, Radio } from 'lucide-react';
 
-export default function AccountSettingsDialog({ settings, onClose, onSave }) {
+const USE_WEBRTC = import.meta.env.VITE_USE_WEBRTC === 'true';
+
+export default function AccountSettingsDialog({ settings, onClose, onSave, preferWebSocket, onToggleWebSocket }) {
   const [swarUsername, setSwarUsername] = useState(settings?.swarUsername ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,6 +34,35 @@ export default function AccountSettingsDialog({ settings, onClose, onSave }) {
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-4">
+          {USE_WEBRTC && (
+            <div>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                エンジン接続方式
+              </div>
+              <div className="flex rounded-xl overflow-hidden border border-gray-700">
+                {[
+                  { value: false, label: 'WebRTC', sub: '通常', icon: Radio },
+                  { value: true,  label: 'WebSocket', sub: '学校・制限環境向け', icon: Wifi },
+                ].map(({ value, label, sub, icon: Icon }) => (
+                  <button
+                    key={String(value)}
+                    onClick={() => onToggleWebSocket(value)}
+                    className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors
+                      ${preferWebSocket === value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                  >
+                    <Icon size={15} />
+                    <span>{label}</span>
+                    <span className={`text-[10px] font-normal ${preferWebSocket === value ? 'text-blue-200' : 'text-gray-600'}`}>{sub}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-600 mt-1.5">
+                WebRTCがブロックされる環境ではWebSocketを選択してください。変更は即時反映されます。
+              </p>
+            </div>
+          )}
           <div>
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
               将棋ウォーズ
