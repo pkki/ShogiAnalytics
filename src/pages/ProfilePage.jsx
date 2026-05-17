@@ -9,7 +9,7 @@ import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Heart, Bookmark, Edit2, Check, X, Flag,
+  Heart, Bookmark, Edit2, Check, X, Flag, User, Shuffle,
 } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 import { getGrade } from '../utils/shogiRating';
@@ -609,9 +609,10 @@ export default function ProfilePage() {
   const { userId }  = useParams();
   const navigate    = useNavigate();
   const [profile, setProfile] = useState(null);
-  const [tsumes,  setTsumes]  = useState([]);
-  const [bookmarks, setBookmarks] = useState([]);
-  const [tab,     setTab]     = useState('posts');
+  const [tsumes,       setTsumes]       = useState([]);
+  const [bookmarks,    setBookmarks]    = useState([]);
+  const [tab,          setTab]          = useState('posts');
+  const [postSourceTab, setPostSourceTab] = useState('user'); // 'user' | 'generator'
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
   const [games,   setGames]   = useState([]);
@@ -660,7 +661,13 @@ export default function ProfilePage() {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       setProfile(data.profile);
-      setTsumes(data.tsumes || []);
+      const loadedTsumes = data.tsumes || [];
+      setTsumes(loadedTsumes);
+      // ユーザーが作成した詰将棋がなくジェネレーター製のみの場合、自動でジェネレータータブを開く
+      const hasUserMade = loadedTsumes.some(item => !item.source || item.source === 'user');
+      if (!hasUserMade && loadedTsumes.some(item => item.source === 'generator')) {
+        setPostSourceTab('generator');
+      }
       setEditName(data.profile.displayName || '');
       setEditBio(data.profile.bio || '');
       setEditColor(data.profile.avatarColor || '#2563eb');
@@ -940,23 +947,51 @@ export default function ProfilePage() {
         <div className="py-3 px-4">
 
           {/* 投稿タブ */}
-          {tab === 'posts' && (
-            tsumes.length === 0
-              ? <p className="text-gray-500 text-sm text-center py-8">{t('profile.noTsume')}</p>
-              : <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {tsumes.map(item => (
-                    <GridCard
-                      key={item.token}
-                      token={item.token}
-                      title={item.title}
-                      numMoves={item.num_moves}
-                      boardJson={item.board_json}
-                      likes={item.likes}
-                      showAuthor={false}
-                    />
+          {tab === 'posts' && (() => {
+            const filtered = tsumes.filter(item =>
+              postSourceTab === 'generator'
+                ? item.source === 'generator'
+                : !item.source || item.source === 'user'
+            );
+            return (
+              <>
+                {/* 投稿ソースサブタブ */}
+                <div className="flex mb-3 rounded-xl overflow-hidden border border-gray-700 text-xs font-medium">
+                  {[
+                    { key: 'user',      label: 'ユーザーが作成', icon: User },
+                    { key: 'generator', label: 'ジェネレーター', icon: Shuffle },
+                  ].map(({ key, label: lbl, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setPostSourceTab(key)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors
+                        ${postSourceTab === key
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                    >
+                      <Icon size={11} />{lbl}
+                    </button>
                   ))}
                 </div>
-          )}
+                {filtered.length === 0
+                  ? <p className="text-gray-500 text-sm text-center py-8">{t('profile.noTsume')}</p>
+                  : <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {filtered.map(item => (
+                        <GridCard
+                          key={item.token}
+                          token={item.token}
+                          title={item.title}
+                          numMoves={item.num_moves}
+                          boardJson={item.board_json}
+                          likes={item.likes}
+                          showAuthor={false}
+                        />
+                      ))}
+                    </div>
+                }
+              </>
+            );
+          })()}
 
           {/* ブックマークタブ */}
           {tab === 'bookmarks' && (

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Heart, ChevronRight, Lock } from 'lucide-react';
+import { Heart, ChevronRight, Lock, Shuffle, User } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
@@ -138,22 +138,23 @@ function CategorySidebar() {
 export default function TsumeListPage() {
   const { moves } = useParams();
   const { t } = useTranslation();
-  const [items,   setItems]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sort,    setSort]    = useState('recent');
+  const [items,     setItems]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [sort,      setSort]      = useState('recent');
+  const [sourceTab, setSourceTab] = useState('user'); // 'user' | 'generator'
 
   const label = t(`tsume.categories.${moves}`) || t('tsume.categories.all');
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ sort, limit: '100' });
+    const params = new URLSearchParams({ sort, limit: '100', source: sourceTab });
     if (moves && moves !== 'all') params.set('moves', moves);
     fetch(`${CLOUD_API}/api/tsume/list?${params}`)
       .then(r => r.json())
       .then(d => { if (d.ok) setItems(d.items); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [moves, sort]);
+  }, [moves, sort, sourceTab]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white lg:ml-64 pb-16 lg:pb-0">
@@ -189,6 +190,25 @@ export default function TsumeListPage() {
               </button>
             ))}
           </div>
+        </div>
+        {/* ソースタブ */}
+        <div className="flex border-t border-gray-700/60 lg:ml-64">
+          {[
+            { key: 'user',      label: 'ユーザーが作成', icon: User },
+            { key: 'generator', label: 'ジェネレーターが作成', icon: Shuffle },
+          ].map(({ key, label: tabLabel, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setSourceTab(key)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors border-b-2
+                ${sourceTab === key
+                  ? 'border-blue-500 text-blue-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            >
+              <Icon size={12} />
+              {tabLabel}
+            </button>
+          ))}
         </div>
       </div>
 
