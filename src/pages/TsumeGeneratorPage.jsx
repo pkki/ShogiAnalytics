@@ -318,14 +318,15 @@ export default function TsumeGeneratorPage() {
   // 生成された局面を公開する
   async function publishPuzzle(puzzleData) {
     if (!publishEnabled) return;
+    const authToken = localStorage.getItem('shogi_jwt');
+    if (!authToken) return; // 未ログインは投稿しない
     try {
-      const authToken = localStorage.getItem('shogi_jwt');
       const title = `${puzzleData.numMoves}手詰め（AI生成）`;
       const res = await fetch(`${CLOUD_API}/api/tsume`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           title,

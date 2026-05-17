@@ -2540,16 +2540,18 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     const descriptionSnap = tsumeDescription.trim();
 
     async function postPuzzle(solution, numMoves) {
+      if (!authToken) throw new Error('詰将棋を投稿するにはログインが必要です');
       const puzzle = { board: boardSnap, hands: handsSnap, attacker: 1, solution, numMoves };
       const finalTitle = titleSnap || `${numMoves}手詰め`;
       const res = await fetch(`${CLOUD_API}/api/tsume`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ title: finalTitle, puzzle, visibility: visibilitySnap, description: descriptionSnap }),
       });
+      if (res.status === 401) throw new Error('詰将棋を投稿するにはログインが必要です');
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || '共有に失敗しました');
       setTsumeUrl(`${window.location.origin}/tsume/${json.token}`);
