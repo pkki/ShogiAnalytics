@@ -5,6 +5,13 @@ import { NetworkOnly } from 'workbox-strategies';
 // Injected at build time by VitePWA
 precacheAndRoute(self.__WB_MANIFEST);
 
+// vite-plugin-pwa の updateServiceWorker() から送られる SKIP_WAITING を処理
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // API/auth/socket routes — never cache, always go to network
 registerRoute(
   ({ url }) => /^\/(api|auth|socket\.io)/.test(url.pathname),
