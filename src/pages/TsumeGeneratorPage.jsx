@@ -438,20 +438,40 @@ export default function TsumeGeneratorPage() {
   function runJSWorker(numMoves) {
     return new Promise((resolve) => {
       workerRef.current?.terminate();
-      const w = new TsumeGeneratorWorkerClass();
-      workerRef.current = w;
-      w.onmessage = ({ data }) => {
-        if (data.type === 'progress') {
-          setProgress({ attempt: data.attempt, max: data.max });
-        } else if (data.type === 'result') {
-          workerRef.current = null;
-          resolve({ ok: true, ...data });
-        } else if (data.type === 'failed') {
-          workerRef.current = null;
-          resolve({ ok: false });
-        }
-      };
-      w.postMessage({ cmd: 'generate', numMoves, useRetrograde: true });
+
+      const now = Date.now();
+      const seeds = [now, now ^ 0x9f3b7abc, now ^ 0x12345678];
+      const workers = seeds.map(() => new TsumeGeneratorWorkerClass());
+
+      let settled = false;
+      let failCount = 0;
+
+      // proxy so cancelGeneration/generate can still call .terminate()
+      workerRef.current = { terminate() { workers.forEach(w => w.terminate()); } };
+
+      workers.forEach((w, i) => {
+        w.onmessage = ({ data }) => {
+          if (data.type === 'progress') {
+            setProgress({ attempt: data.attempt, max: data.max });
+          } else if (data.type === 'result') {
+            if (!settled) {
+              settled = true;
+              workers.forEach(ww => ww.terminate());
+              workerRef.current = null;
+              resolve({ ok: true, ...data });
+            }
+          } else if (data.type === 'failed') {
+            failCount++;
+            if (!settled && failCount === workers.length) {
+              settled = true;
+              workers.forEach(ww => ww.terminate());
+              workerRef.current = null;
+              resolve({ ok: false });
+            }
+          }
+        };
+        w.postMessage({ cmd: 'generate', numMoves, useRetrograde: true, seed: seeds[i] });
+      });
     });
   }
 

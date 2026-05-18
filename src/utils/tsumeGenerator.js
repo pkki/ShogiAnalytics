@@ -75,7 +75,7 @@ export function trimSparePieces(board, hands, numMoves, timeoutMs) {
       th[1][type] = count - 1;
       if (!th[1][type]) delete th[1][type];
       fillDefenderHand(board, th);
-      const sol = solveTsume(board, th, 1, numMoves, timeoutMs);
+      const sol = solveTsume(board, th, 1, numMoves, timeoutMs, true);
       if (sol && sol.length > 0) {
         // この駒は余り → hands[1] から除去
         hands[1][type] = count - 1;
@@ -274,7 +274,7 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
 
     // 短手数で解ける局面を除外
     if (numMoves >= 3 && TIME_EXCLUDE > 0) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_EXCLUDE);
+      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_EXCLUDE, true);
       if (shorter) continue;
     }
 

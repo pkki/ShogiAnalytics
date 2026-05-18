@@ -70,13 +70,13 @@ function generateAllLegalMoves(board, hands, player) {
  * - reply が null → 玉方の手の後で詰みを探せなかった (通常は起きない)
  */
 // timeoutMs = 0 でタイムアウト無効 (Worker 側で使用)
-export function solveTsume(board, hands, attacker, maxHalfMoves, timeoutMs = 10_000) {
+// findFirst = true: OR ノードで最初の解が見つかり次第即返却 (存在チェック用、高速)
+export function solveTsume(board, hands, attacker, maxHalfMoves, timeoutMs = 10_000, findFirst = false) {
   const defender = attacker === 1 ? 2 : 1;
   const deadline = timeoutMs > 0 ? Date.now() + timeoutMs : Infinity;
 
   function solve(b, h, isAttackerTurn, halfLeft) {
     if (Date.now() > deadline) throw new Error('timeout');
-    const currentPlayer = isAttackerTurn ? attacker : defender;
 
     if (isAttackerTurn) {
       // OR ノード: 攻め方は王手になる手を1つ以上見つければよい
@@ -87,10 +87,14 @@ export function solveTsume(board, hands, attacker, maxHalfMoves, timeoutMs = 10_
         const { board: nb, hands: nh } = applyMove(b, h, move, attacker);
         if (!isInCheck(nb, defender)) continue; // 王手でなければスキップ
         if (isCheckmate(nb, nh, defender)) {
+          if (findFirst) return [{ move, defenses: [] }];
           solutions.push({ move, defenses: [] }); // 即詰み
         } else if (halfLeft > 1) {
           const defenses = solve(nb, nh, false, halfLeft - 1);
-          if (defenses !== null) solutions.push({ move, defenses });
+          if (defenses !== null) {
+            if (findFirst) return [{ move, defenses }];
+            solutions.push({ move, defenses });
+          }
         }
       }
       return solutions.length > 0 ? solutions : null;

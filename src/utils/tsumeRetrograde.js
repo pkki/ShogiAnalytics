@@ -269,7 +269,7 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
 
     // 短手数で解けてしまう局面を排除
     if (numMoves >= 3) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER);
+      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER, true);
       if (shorter) continue;
     }
 

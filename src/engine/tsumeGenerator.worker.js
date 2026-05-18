@@ -14,20 +14,21 @@ import { generateRetrogradeTsume } from '../utils/tsumeRetrograde.js';
 
 self.onmessage = ({ data }) => {
   if (data.cmd !== 'generate') return;
-  const { numMoves, useRetrograde } = data;
+  const { numMoves, useRetrograde, seed } = data;
+  const actualSeed = seed ?? Date.now();
 
   const onProgress = (attempt, max) => self.postMessage({ type: 'progress', attempt, max });
 
   let result = null;
 
   if (useRetrograde) {
-    result = generateRetrogradeTsume(numMoves, Date.now(), onProgress);
+    result = generateRetrogradeTsume(numMoves, actualSeed, onProgress);
     // フォールバック: 逆算失敗時はランダム生成
     if (!result) {
-      result = generateTsumePosition(numMoves, Date.now() ^ 0xabcd, onProgress);
+      result = generateTsumePosition(numMoves, actualSeed ^ 0xabcd, onProgress);
     }
   } else {
-    result = generateTsumePosition(numMoves, Date.now(), onProgress);
+    result = generateTsumePosition(numMoves, actualSeed, onProgress);
   }
 
   if (result) {
