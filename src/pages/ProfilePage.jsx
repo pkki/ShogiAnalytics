@@ -16,6 +16,7 @@ import { getGrade } from '../utils/shogiRating';
 import GameHistoryFilter, { filterGames } from '../components/GameHistoryFilter.jsx';
 import GameHistoryCard from '../components/GameHistoryCard.jsx';
 import AccountMenu from '../components/AccountMenu.jsx';
+import { useAccountSettings } from '../hooks/useAccountSettings.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -670,10 +671,11 @@ export default function ProfilePage() {
     if (!myToken) return null;
     try {
       const p = JSON.parse(atob(myToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { userId: p.userId, email: p.email };
+      return { userId: p.userId, email: p.email, token: myToken };
     } catch { return null; }
   }, [myToken]);
   const myUserId = myAuthInfo?.userId ?? null;
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(myAuthInfo?.token ?? null);
   const isMe = myUserId === userId;
 
   // 自分が参加した対局（通報の証拠選択用）
@@ -823,10 +825,12 @@ export default function ProfilePage() {
               email={myAuthInfo.email}
               userId={myAuthInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onShowSettings={onShowSettings}
             />
           )}
         </div>
       </div>
+      {settingsDialog}
 
       <div className="max-w-3xl mx-auto">
 

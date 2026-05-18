@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Heart, ChevronRight, Lock, Shuffle, User } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 import AccountMenu from '../components/AccountMenu.jsx';
+import { useAccountSettings } from '../hooks/useAccountSettings.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -152,9 +153,10 @@ export default function TsumeListPage() {
     if (!token) return null;
     try {
       const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId };
+      return { email: p.email, userId: p.userId, token };
     } catch { return null; }
   }, []);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
 
   useEffect(() => {
     setLoading(true);
@@ -169,6 +171,7 @@ export default function TsumeListPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white lg:ml-64 pb-16 lg:pb-0">
+      {settingsDialog}
       <TsumeNav />
       <Helmet>
         <title>{label} | {t('appName')}</title>
@@ -206,6 +209,7 @@ export default function TsumeListPage() {
               email={authInfo.email}
               userId={authInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onShowSettings={onShowSettings}
             />
           )}
         </div>

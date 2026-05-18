@@ -14,6 +14,7 @@ import {
 import { BoardCore, HandRowHorizontal, HandColumnVertical } from '../components/ShogiBoard.jsx';
 import TsumeNav from '../components/TsumeNav.jsx';
 import AccountMenu from '../components/AccountMenu.jsx';
+import { useAccountSettings } from '../hooks/useAccountSettings.jsx';
 
 const CLOUD_API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
@@ -246,13 +247,14 @@ export default function TsumePage() {
   const navigate  = useNavigate();
 
   const authInfo = useMemo(() => {
-    const t = localStorage.getItem('shogi_jwt');
-    if (!t) return null;
+    const tok = localStorage.getItem('shogi_jwt');
+    if (!tok) return null;
     try {
-      const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId };
+      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { email: p.email, userId: p.userId, token: tok };
     } catch { return null; }
   }, []);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
 
   // ── ロード状態 ─────────────────────────────────────────────
   const [loadStatus,  setLoadStatus]  = useState('loading');
@@ -664,10 +666,12 @@ export default function TsumePage() {
               email={authInfo.email}
               userId={authInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onShowSettings={onShowSettings}
             />
           )}
         </div>
       </div>
+      {settingsDialog}
 
       {/* ── メインコンテンツ ── */}
       <div className="max-w-5xl mx-auto px-4 py-4">

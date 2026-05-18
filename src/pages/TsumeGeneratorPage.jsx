@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AccountMenu from '../components/AccountMenu.jsx';
+import { useAccountSettings } from '../hooks/useAccountSettings.jsx';
 import {
   ChevronLeft, RotateCcw, Lightbulb, Play, Square, Shuffle, Cpu, Wifi, WifiOff,
   SkipBack, SkipForward, ChevronRight as ChevronRightIcon, FlipVertical2, Trophy,
@@ -141,13 +142,14 @@ function engineParams(moves) {
 export default function TsumeGeneratorPage() {
   const navigate = useNavigate();
   const authInfo = useMemo(() => {
-    const t = localStorage.getItem('shogi_jwt');
-    if (!t) return null;
+    const tok = localStorage.getItem('shogi_jwt');
+    if (!tok) return null;
     try {
-      const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId };
+      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return { email: p.email, userId: p.userId, token: tok };
     } catch { return null; }
   }, []);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
 
   const [difficulty,      setDifficulty]      = useState(3);
   const [forceEngine,     setForceEngine]     = useState(false);
@@ -808,10 +810,12 @@ export default function TsumeGeneratorPage() {
               email={authInfo.email}
               userId={authInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onShowSettings={onShowSettings}
             />
           )}
         </div>
       </div>
+      {settingsDialog}
 
       {/* メインコンテンツ */}
       <div className="max-w-5xl mx-auto px-4 py-4">
