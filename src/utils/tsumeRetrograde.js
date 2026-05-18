@@ -56,8 +56,17 @@ function shuffle(arr, rng) {
 
 /**
  * 玉方が詰んでいる局面 (S_N) をランダムに生成する。
+ * @param {number} targetMoves 目標手数 (駒数スケーリングに使用)
  */
-function generateCheckmateBase(rng) {
+function generateCheckmateBase(rng, targetMoves = 5) {
+  // 手数が多いほど逆算ステップ数が多い → 盤上駒・持ち駒を多めに用意
+  const numPieces = targetMoves <= 3 ? 2 + Math.floor(rng() * 2)
+                  : targetMoves <= 5 ? 2 + Math.floor(rng() * 3)
+                  : targetMoves <= 9 ? 3 + Math.floor(rng() * 4)
+                  :                    4 + Math.floor(rng() * 5);
+  const numHand = targetMoves <= 5 ? Math.floor(rng() * 3)
+                :                    1 + Math.floor(rng() * 3);
+
   for (let attempt = 0; attempt < 400; attempt++) {
     const board = Array(9).fill(null).map(() => Array(9).fill(null));
     const hands = { 1: {}, 2: {} };
@@ -81,8 +90,7 @@ function generateCheckmateBase(rng) {
     }
     if (!attPlaced) continue;
 
-    // 攻め方の駒を 2〜4 枚、玉周辺に配置
-    const numPieces = 2 + Math.floor(rng() * 3);
+    // 攻め方の駒を玉周辺に配置
     for (let i = 0; i < numPieces; i++) {
       const pType = BOARD_ATK_TYPES[Math.floor(rng() * BOARD_ATK_TYPES.length)];
       for (let pi = 0; pi < 40; pi++) {
@@ -92,8 +100,7 @@ function generateCheckmateBase(rng) {
       }
     }
 
-    // 少量の持ち駒
-    const numHand = Math.floor(rng() * 3);
+    // 持ち駒
     for (let i = 0; i < numHand; i++) {
       const p = HAND_TYPES[Math.floor(rng() * HAND_TYPES.length)];
       hands[1][p] = (hands[1][p] || 0) + 1;
@@ -195,22 +202,40 @@ function retrogradeStep(board, hands, player, needsCheckAfter, rng) {
 }
 
 /**
- * 逆算で N 手詰め局面を生成する。
+ * 逆算で N 手詰め局面を生成する。1/3/5/7/9/13 手に対応。
  *
- * @param {number} numMoves 1 | 3 | 5
+ * @param {number} numMoves
  * @param {number} seed
  * @param {function} onProgress
  * @returns {{ board, hands, attacker, solution, numMoves } | null}
  */
 export function generateRetrogradeTsume(numMoves, seed, onProgress) {
   const rng = makeRng(seed ?? Date.now());
-  const MAX_ATTEMPTS = numMoves === 1 ? 400 : numMoves === 3 ? 300 : 200;
-  const TIME_SOLVE   = numMoves === 1 ? 300 : numMoves === 3 ? 1000 : 4000;
+
+  const MAX_ATTEMPTS = numMoves <=  1 ? 400
+                     : numMoves <=  3 ? 300
+                     : numMoves <=  5 ? 200
+                     : numMoves <=  7 ? 150
+                     : numMoves <=  9 ? 100
+                     :                   60;
+  const TIME_SOLVE   = numMoves <=  1 ?  300
+                     : numMoves <=  3 ? 1000
+                     : numMoves <=  5 ? 4000
+                     : numMoves <=  7 ? 10000
+                     : numMoves <=  9 ? 20000
+                     :                 35000;
+  const TIME_SHORTER = numMoves <=  5 ?  200 : Math.min(Math.round(TIME_SOLVE / 5), 2000);
+  const TIME_SPARE   = numMoves <=  1 ?  100
+                     : numMoves <=  3 ?  200
+                     : numMoves <=  5 ?  500
+                     : numMoves <=  7 ? 1500
+                     : numMoves <=  9 ? 3000
+                     :                 5000;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     onProgress?.(attempt, MAX_ATTEMPTS);
 
-    const base = generateCheckmateBase(rng);
+    const base = generateCheckmateBase(rng, numMoves);
     if (!base) continue;
 
     let { board, hands } = base;
@@ -244,18 +269,15 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
 
     // 短手数で解けてしまう局面を排除
     if (numMoves >= 3) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, 200);
+      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER);
       if (shorter) continue;
     }
 
     // N 手詰めを確認
     const sol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
     if (sol && sol.length > 0) {
-      // 余り駒を除去して持ち駒を必要最小限に整理
-      const TIME_SPARE = numMoves === 1 ? 100 : numMoves === 3 ? 200 : 500;
       const hasHand = trimSparePieces(board, hands, numMoves, TIME_SPARE);
-      if (!hasHand) continue; // 全て余り駒だった（持ち駒なしで詰む）
-      // 持ち駒が変わったため再ソルブ
+      if (!hasHand) continue;
       const finalSol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
       if (finalSol && finalSol.length > 0) {
         return { board, hands, attacker: 1, solution: finalSol, numMoves };
@@ -275,7 +297,7 @@ export function generateRetrogradeCandidatePosition(numMoves, seed) {
   const rng = makeRng(seed ?? Date.now());
 
   for (let attempt = 0; attempt < 200; attempt++) {
-    const base = generateCheckmateBase(rng);
+    const base = generateCheckmateBase(rng, numMoves);
     if (!base) continue;
 
     let { board, hands } = base;

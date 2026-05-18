@@ -116,13 +116,13 @@ function usiMovesToSolutionTree(usiMoves, board, hands, attacker) {
 // ── 難易度設定 ────────────────────────────────────────────────────
 
 const DIFFICULTIES = [
-  { label: '1手', moves: 1,  engine: false },
-  { label: '3手', moves: 3,  engine: false },
-  { label: '5手', moves: 5,  engine: false },
-  { label: '7手', moves: 7,  engine: true  },
-  { label: '9手', moves: 9,  engine: true  },
-  { label: '13手', moves: 13, engine: true  },
-  { label: '超手数', moves: 0,  engine: true  }, // moves=0 = エンジン任せ
+  { label: '1手',  moves:  1, engine: false },
+  { label: '3手',  moves:  3, engine: false },
+  { label: '5手',  moves:  5, engine: false },
+  { label: '7手',  moves:  7, engine: false },
+  { label: '9手',  moves:  9, engine: false },
+  { label: '13手', moves: 13, engine: false },
+  { label: '超手数', moves: 0, engine: true  }, // moves=0 = エンジン任せ
 ];
 
 // エンジン使用時のパラメータ
