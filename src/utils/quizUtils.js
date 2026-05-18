@@ -17,6 +17,9 @@ const FILE_KAN = { '１':1,'２':2,'３':3,'４':4,'５':5,'６':6,'７':7,'８'
 const RANK_KAN = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9 };
 function kc(f, r) { return [r - 1, 9 - f]; } // KIF file(1-9) + rank(1-9) → [row,col]
 
+// 解析深さの最低ライン（これ未満のデプスは信憑性が低いとして除外）
+const MIN_ANALYSIS_DEPTH = 8;
+
 // ── 平手初期局面 ─────────────────────────────────────────────────
 function makeInitialBoard() {
   return [
@@ -173,6 +176,12 @@ export function extractQuizPositions(kifText) {
     if (best.score == null || afterBest.score == null) { lastTo = mv.to; continue; }
     if (best.isMate || afterBest.isMate) { lastTo = mv.to; continue; }
 
+    // 解析深さが不十分な場合は除外（depth が記録されていて MIN_ANALYSIS_DEPTH 未満）
+    if ((best.depth != null && best.depth < MIN_ANALYSIS_DEPTH) ||
+        (afterBest.depth != null && afterBest.depth < MIN_ANALYSIS_DEPTH)) {
+      lastTo = mv.to; continue;
+    }
+
     // CPL 計算（先手絶対値で保存されているので符号調整）
     const cpl = player === 1
       ? Math.max(0, best.score - afterBest.score)
@@ -195,9 +204,26 @@ export function extractQuizPositions(kifText) {
       ? parsePvJPFirstMove(secondBestCand.pvJP, lastTo)
       : null;
 
+    // 実際の棋譜の続き（悪手から最大5手、"自分の手"タブ用）
+    const actualGameContinuation = [];
+    for (let j = i; j < Math.min(i + 5, moves.length); j++) {
+      const posJ1 = positions[j + 1];
+      if (!posJ1) break;
+      const mvJ = moves[j];
+      actualGameContinuation.push({
+        board:    deepCopyBoard(posJ1.board),
+        hands:    deepCopyHands(posJ1.hands),
+        lastMove: mvJ.to ? {
+          from: mvJ.from ? `${mvJ.from[0]},${mvJ.from[1]}` : null,
+          to:   `${mvJ.to[0]},${mvJ.to[1]}`,
+        } : null,
+        label: mvJ.label || '',
+      });
+    }
+
     result.push({
-      boardBeforeMove:  posBefore.board,
-      handsBeforeMove:  posBefore.hands,
+      boardBeforeMove:         posBefore.board,
+      handsBeforeMove:         posBefore.hands,
       player,
       moveNumber:       i + 1,
       cpl,
@@ -211,6 +237,7 @@ export function extractQuizPositions(kifText) {
       actualScore:      afterBest.score,
       actualMoveLabel:  mv.label             || '',
       afterBestPvJP:    afterBest.pvJP       || '',
+      actualGameContinuation,
       senteName:        gameInfo.senteName   || '先手',
       goteName:         gameInfo.goteName    || '後手',
     });
