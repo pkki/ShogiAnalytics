@@ -89,6 +89,23 @@ export function trimSparePieces(board, hands, numMoves, timeoutMs) {
   return Object.values(hands[1]).some(c => (c || 0) > 0);
 }
 
+function getBaseType(t) {
+  return t.startsWith('+') ? t.slice(1) : t;
+}
+
+// 盤上 + hands[1] での baseType の使用枚数 (両プレイヤー合計)
+function countUsedOfBase(board, hands1, baseType) {
+  let n = 0;
+  for (let r = 0; r < 9; r++)
+    for (let c = 0; c < 9; c++) {
+      const p = board[r][c];
+      if (!p || p.type === 'K') continue;
+      if (getBaseType(p.type) === baseType) n++;
+    }
+  n += (hands1[baseType] || 0);
+  return n;
+}
+
 // xorshift32 RNG
 function makeRng(seed) {
   let s = ((seed ^ 0xdeadbeef) >>> 0) || 0xcafebabe;
@@ -201,8 +218,14 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
                   : numMoves === 3 ? 2 + Math.floor(rng() * 2)
                   : 2 + Math.floor(rng() * 3);
     for (let i = 0; i < numHand; i++) {
-      const p = HAND_PIECES[Math.floor(rng() * HAND_PIECES.length)];
-      hands[1][p] = (hands[1][p] || 0) + 1;
+      // 残り枚数がある駒種のみ加算
+      for (let hi = 0; hi < HAND_PIECES.length * 3; hi++) {
+        const p = HAND_PIECES[Math.floor(rng() * HAND_PIECES.length)];
+        if (countUsedOfBase(board, hands[1], p) < PIECE_TOTALS[p]) {
+          hands[1][p] = (hands[1][p] || 0) + 1;
+          break;
+        }
+      }
     }
 
     // 攻め方の盤上駒 (3手・5手用)
@@ -211,6 +234,8 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
       const usedPawnCols = new Set();
       for (let i = 0; i < numBoardAtk; i++) {
         const pType = BOARD_ATK_PIECES[Math.floor(rng() * BOARD_ATK_PIECES.length)];
+        const pBase = getBaseType(pType);
+        if (countUsedOfBase(board, hands[1], pBase) >= PIECE_TOTALS[pBase]) continue;
         for (let ai = 0; ai < 40; ai++) {
           const r = Math.floor(rng() * 9);
           const c = Math.floor(rng() * 9);
@@ -315,8 +340,13 @@ export function generateCandidatePosition(numMoves, seed) {
                   : numMoves <= 13 ? 4 + Math.floor(rng() * 3)
                   :                  5 + Math.floor(rng() * 3);
     for (let i = 0; i < numHand; i++) {
-      const p = HAND_PIECES[Math.floor(rng() * HAND_PIECES.length)];
-      hands[1][p] = (hands[1][p] || 0) + 1;
+      for (let hi = 0; hi < HAND_PIECES.length * 3; hi++) {
+        const p = HAND_PIECES[Math.floor(rng() * HAND_PIECES.length)];
+        if (countUsedOfBase(board, hands[1], p) < PIECE_TOTALS[p]) {
+          hands[1][p] = (hands[1][p] || 0) + 1;
+          break;
+        }
+      }
     }
 
     // 盤上の攻め方の駒
@@ -326,6 +356,8 @@ export function generateCandidatePosition(numMoves, seed) {
     const usedPawnCols = new Set();
     for (let i = 0; i < numBoardAtk; i++) {
       const pType = BOARD_ATK_PIECES[Math.floor(rng() * BOARD_ATK_PIECES.length)];
+      const pBase = getBaseType(pType);
+      if (countUsedOfBase(board, hands[1], pBase) >= PIECE_TOTALS[pBase]) continue;
       for (let ai = 0; ai < 40; ai++) {
         const r = Math.floor(rng() * 9);
         const c = Math.floor(rng() * 9);
