@@ -23,8 +23,8 @@ self.onmessage = ({ data }) => {
 
   if (useRetrograde) {
     result = generateRetrogradeTsume(numMoves, actualSeed, onProgress);
-    // フォールバック: 逆算失敗時はランダム生成
-    if (!result) {
+    // フォールバック: 逆算失敗時はランダム生成 (5手以下のみ; 7手以上はgenerateTsumePositionが不適切)
+    if (!result && numMoves <= 5) {
       result = generateTsumePosition(numMoves, actualSeed ^ 0xabcd, onProgress);
     }
   } else {

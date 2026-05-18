@@ -11,6 +11,28 @@ import { solveTsume } from '../engine/tsumeShogi.js';
 const PIECE_TOTALS = { R: 2, B: 2, G: 4, S: 4, N: 4, L: 4, P: 18 };
 
 /**
+ * 解手順ツリーの「最短詰み手数」を返す（攻め方視点の最小経路）。
+ * 正しい N 手詰め問題なら minSolveDepth(finalSol) === N のはず。
+ * 短い経路が混入していれば N より小さくなるので不正検出に使う。
+ */
+function minSolveDepth(sol) {
+  if (!sol || sol.length === 0) return Infinity;
+  let min = Infinity;
+  for (const node of sol) {
+    if (!node.defenses || node.defenses.length === 0) {
+      min = Math.min(min, 1);
+    } else {
+      let worst = 0;
+      for (const d of node.defenses) {
+        worst = Math.max(worst, 1 + minSolveDepth(d.reply));
+      }
+      min = Math.min(min, 1 + worst);
+    }
+  }
+  return min === Infinity ? 0 : min;
+}
+
+/**
  * 玉方の持ち駒を自動計算する。
  * 詰将棋のルール: 玉方は盤上にない・攻め方も持っていない駒を全て持つ。
  */
@@ -75,7 +97,7 @@ export function trimSparePieces(board, hands, numMoves, timeoutMs) {
       th[1][type] = count - 1;
       if (!th[1][type]) delete th[1][type];
       fillDefenderHand(board, th);
-      const sol = solveTsume(board, th, 1, numMoves, timeoutMs, true);
+      const sol = solveTsume(board, th, 1, numMoves, timeoutMs);
       if (sol && sol.length > 0) {
         // この駒は余り → hands[1] から除去
         hands[1][type] = count - 1;
@@ -272,9 +294,10 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
 
     if (!isValidStart(board, hands)) continue;
 
-    // 短手数で解ける局面を除外
-    if (numMoves >= 3 && TIME_EXCLUDE > 0) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_EXCLUDE, true);
+    // 短手数で解ける局面を除外 (numMoves >= 3 は常にチェック)
+    if (numMoves >= 3) {
+      const tExclude = TIME_EXCLUDE > 0 ? TIME_EXCLUDE : 200;
+      const shorter = solveTsume(board, hands, 1, numMoves - 2, tExclude, true);
       if (shorter) continue;
     }
 
@@ -285,9 +308,15 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
       const TIME_SPARE = numMoves === 1 ? 100 : numMoves === 3 ? 200 : 500;
       const hasHand = trimSparePieces(board, hands, numMoves, TIME_SPARE);
       if (!hasHand) continue; // 全て余り駒だった（持ち駒なしで詰む）
+      // trim 後に局面が簡単になっていないか再確認
+      if (numMoves >= 3) {
+        const tExclude = TIME_EXCLUDE > 0 ? TIME_EXCLUDE : 500;
+        const shorter = solveTsume(board, hands, 1, numMoves - 2, tExclude, true);
+        if (shorter) continue;
+      }
       // 持ち駒が変わったため再ソルブ
       const finalSol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
-      if (finalSol && finalSol.length > 0) {
+      if (finalSol && finalSol.length > 0 && minSolveDepth(finalSol) === numMoves) {
         return { board, hands, attacker: 1, solution: finalSol, numMoves };
       }
     }

@@ -18,6 +18,23 @@ function makeRng(seed) {
   return () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >>> 0) / 0x100000000; };
 }
 
+function minSolveDepth(sol) {
+  if (!sol || sol.length === 0) return Infinity;
+  let min = Infinity;
+  for (const node of sol) {
+    if (!node.defenses || node.defenses.length === 0) {
+      min = Math.min(min, 1);
+    } else {
+      let worst = 0;
+      for (const d of node.defenses) {
+        worst = Math.max(worst, 1 + minSolveDepth(d.reply));
+      }
+      min = Math.min(min, 1 + worst);
+    }
+  }
+  return min === Infinity ? 0 : min;
+}
+
 function findKing(board, player) {
   for (let r = 0; r < 9; r++)
     for (let c = 0; c < 9; c++)
@@ -215,9 +232,9 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
   const MAX_ATTEMPTS = numMoves <=  1 ? 400
                      : numMoves <=  3 ? 300
                      : numMoves <=  5 ? 200
-                     : numMoves <=  7 ? 150
-                     : numMoves <=  9 ? 100
-                     :                   60;
+                     : numMoves <=  7 ? 300
+                     : numMoves <=  9 ? 150
+                     :                   80;
   const TIME_SOLVE   = numMoves <=  1 ?  300
                      : numMoves <=  3 ? 1000
                      : numMoves <=  5 ? 4000
@@ -269,7 +286,7 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
 
     // 短手数で解けてしまう局面を排除
     if (numMoves >= 3) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER, true);
+      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER);
       if (shorter) continue;
     }
 
@@ -278,6 +295,11 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
     if (sol && sol.length > 0) {
       const hasHand = trimSparePieces(board, hands, numMoves, TIME_SPARE);
       if (!hasHand) continue;
+      // trim 後に局面が簡単になっていないか再確認
+      if (numMoves >= 3) {
+        const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER, true);
+        if (shorter) continue;
+      }
       const finalSol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
       if (finalSol && finalSol.length > 0) {
         return { board, hands, attacker: 1, solution: finalSol, numMoves };
