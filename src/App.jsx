@@ -1002,10 +1002,10 @@ export default function App() {
         setAuthToken('');
         return;
       }
-      // 残り2時間以内に期限切れ → 自動リフレッシュ
+      // 残り7日以内に期限切れ → 自動リフレッシュ
       // 注意: setAuthToken を呼ぶとソケット再接続が発生するため、
       // localStorage のみ更新して次回の自然な再接続時に新トークンを使用させる
-      if (payload.exp && payload.exp - now < 2 * 3600) {
+      if (payload.exp && payload.exp - now < 7 * 24 * 3600) {
         fetch(`${CLOUD_API}/auth/refresh`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },

@@ -820,13 +820,18 @@ export default function ProfilePage() {
             <p className="font-bold text-white leading-none">{displayName}</p>
             <p className="text-xs text-gray-500 mt-0.5">{tsumes.length}{t('profile.tsumeCount')}</p>
           </div>
-          {myAuthInfo && (
+          {myAuthInfo ? (
             <AccountMenu
               email={myAuthInfo.email}
               userId={myAuthInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
               onShowSettings={onShowSettings}
             />
+          ) : (
+            <Link to="/login"
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-colors">
+              ログイン
+            </Link>
           )}
         </div>
       </div>

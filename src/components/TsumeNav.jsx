@@ -6,7 +6,7 @@
  */
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, User, LayoutGrid, Home, Languages, Globe, Shuffle } from 'lucide-react';
+import { BookOpen, User, LayoutGrid, Home, Languages, Globe, Shuffle, Target } from 'lucide-react';
 
 function parseUserId() {
   try {
@@ -32,6 +32,12 @@ function NavLinks({ userId, onClose }) {
       label: 'ジェネレーター',
       sub:   '詰将棋を自動生成',
       to:    '/tsume-generator',
+    },
+    {
+      icon: Target,
+      label: '弱点クイズ',
+      sub:   '中盤悪手を練習',
+      to:    '/weakness-quiz',
     },
     ...(userId ? [{
       icon:  User,
@@ -101,6 +107,7 @@ export default function TsumeNav() {
     { icon: Home,       label: t('nav.home'),    to: '/' },
     { icon: BookOpen,   label: t('nav.tsume'),   to: '/tsume/category/all' },
     { icon: Shuffle,    label: 'ジェネレーター', to: '/tsume-generator' },
+    { icon: Target,     label: '弱点クイズ',     to: '/weakness-quiz' },
     ...(userId ? [{ icon: User, label: t('nav.profile'), to: `/profile/${userId}` }] : []),
     { icon: Globe,      label: t('nav.online'),  to: '/online' },
     { icon: LayoutGrid, label: t('nav.mainApp'), to: '/app' },

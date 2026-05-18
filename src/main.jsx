@@ -17,6 +17,7 @@ import AdminTrainingPage from './pages/AdminTrainingPage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
 import OnlineLobbyPage from './pages/OnlineLobbyPage.jsx'
 import TsumeGeneratorPage from './pages/TsumeGeneratorPage.jsx'
+import WeaknessQuizPage from './pages/WeaknessQuizPage.jsx'
 
 function isPWAOrAPK() {
   // PWA standalone / fullscreen、またはAndroid APK (TWA) の判定
@@ -56,6 +57,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/online" element={<OnlineLobbyPage />} />
         <Route path="/tsume-generator" element={<RequireNoActiveGame><TsumeGeneratorPage /></RequireNoActiveGame>} />
+        <Route path="/weakness-quiz" element={<RequireNoActiveGame><WeaknessQuizPage /></RequireNoActiveGame>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

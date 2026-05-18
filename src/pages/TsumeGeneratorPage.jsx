@@ -805,13 +805,18 @@ export default function TsumeGeneratorPage() {
               ? <><Wifi size={10} className="animate-pulse shrink-0" />接続中</>
               : <><WifiOff size={10} className="shrink-0" />未接続</>}
           </div>
-          {authInfo && (
+          {authInfo ? (
             <AccountMenu
               email={authInfo.email}
               userId={authInfo.userId}
               onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
               onShowSettings={onShowSettings}
             />
+          ) : (
+            <Link to="/login"
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-colors">
+              ログイン
+            </Link>
           )}
         </div>
       </div>
