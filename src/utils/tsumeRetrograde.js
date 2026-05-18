@@ -137,6 +137,40 @@ function generateCheckmateBase(rng, targetMoves = 5) {
  * @param {boolean} needsCheckAfter - un-apply 後に玉方 (player 2) が王手されているべきか
  */
 function retrogradeStep(board, hands, player, needsCheckAfter, rng) {
+  // 守備側 (player=2) の玉の逆算: 玉が逃げた手を un-move する
+  // 詰将棋の守備側の手の多くは玉移動なので、これを最初に試みる
+  if (player === 2) {
+    const kingPos = findKing(board, 2);
+    if (kingPos) {
+      const [toR, toC] = kingPos;
+      const kingCandidates = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const fr = toR + dr;
+          const fc = toC + dc;
+          if (fr < 0 || fr > 8 || fc < 0 || fc > 8) continue;
+          if (board[fr][fc] !== null) continue; // 逆算元マスは空き
+          kingCandidates.push({ fr, fc });
+        }
+      }
+      shuffle(kingCandidates, rng);
+
+      for (const { fr, fc } of kingCandidates) {
+        const nb = board.map(row => [...row]);
+        const nh = copyHands(hands);
+        nb[toR][toC] = null;
+        nb[fr][fc] = { type: 'K', player: 2 };
+        fillDefenderHand(nb, nh);
+        if (needsCheckAfter  && !isInCheck(nb, 2)) continue;
+        if (!needsCheckAfter &&  isInCheck(nb, 2)) continue;
+        if (isInCheck(nb, 1)) continue;
+        if (isIllegalPlacement(nb)) continue;
+        return { board: nb, hands: nh };
+      }
+    }
+  }
+
   // player の盤上駒（玉以外）をシャッフルして順に試す
   const pieces = [];
   for (let r = 0; r < 9; r++)
@@ -284,22 +318,21 @@ export function generateRetrogradeTsume(numMoves, seed, onProgress) {
     if (isCheckmate(board, hands, 2)) continue;
     if (isIllegalPlacement(board)) continue;
 
-    // 短手数で解けてしまう局面を排除
-    if (numMoves >= 3) {
-      const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER);
+    // 明らかに短い手数（3手以下）で解ける局面を排除する。
+    // 逆算局面は1本の N 手経路を保証するが 5 手などの抜け道は防げないため
+    // numMoves-2 チェックは過剰に厳しく、ほぼ全候補が弾かれる。
+    // 3手以下の抜け道だけを除外すれば実用上十分。
+    const shortDepth = numMoves <= 5 ? numMoves - 2 : 3;
+    if (shortDepth >= 1) {
+      const shorter = solveTsume(board, hands, 1, shortDepth, TIME_SHORTER, true);
       if (shorter) continue;
     }
 
-    // N 手詰めを確認
-    const sol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
+    // N 手詰めを確認（存在チェックのみ）
+    const sol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE, true);
     if (sol && sol.length > 0) {
       const hasHand = trimSparePieces(board, hands, numMoves, TIME_SPARE);
       if (!hasHand) continue;
-      // trim 後に局面が簡単になっていないか再確認
-      if (numMoves >= 3) {
-        const shorter = solveTsume(board, hands, 1, numMoves - 2, TIME_SHORTER, true);
-        if (shorter) continue;
-      }
       const finalSol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
       if (finalSol && finalSol.length > 0) {
         return { board, hands, attacker: 1, solution: finalSol, numMoves };

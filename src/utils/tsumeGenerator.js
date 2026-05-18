@@ -97,7 +97,7 @@ export function trimSparePieces(board, hands, numMoves, timeoutMs) {
       th[1][type] = count - 1;
       if (!th[1][type]) delete th[1][type];
       fillDefenderHand(board, th);
-      const sol = solveTsume(board, th, 1, numMoves, timeoutMs);
+      const sol = solveTsume(board, th, 1, numMoves, timeoutMs, true);
       if (sol && sol.length > 0) {
         // この駒は余り → hands[1] から除去
         hands[1][type] = count - 1;
@@ -308,12 +308,6 @@ export function generateTsumePosition(numMoves, seed, onProgress) {
       const TIME_SPARE = numMoves === 1 ? 100 : numMoves === 3 ? 200 : 500;
       const hasHand = trimSparePieces(board, hands, numMoves, TIME_SPARE);
       if (!hasHand) continue; // 全て余り駒だった（持ち駒なしで詰む）
-      // trim 後に局面が簡単になっていないか再確認
-      if (numMoves >= 3) {
-        const tExclude = TIME_EXCLUDE > 0 ? TIME_EXCLUDE : 500;
-        const shorter = solveTsume(board, hands, 1, numMoves - 2, tExclude, true);
-        if (shorter) continue;
-      }
       // 持ち駒が変わったため再ソルブ
       const finalSol = solveTsume(board, hands, 1, numMoves, TIME_SOLVE);
       if (finalSol && finalSol.length > 0 && minSolveDepth(finalSol) === numMoves) {
