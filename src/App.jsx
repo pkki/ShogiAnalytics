@@ -478,6 +478,16 @@ export default function App() {
       const { parsedMoves, senteName, goteName } = JSON.parse(raw);
       const tree = buildTreeFromMoves(parsedMoves);
       dispatch({ type: 'LOAD_KIF', tree });
+      // KIF に埋め込まれた候補手・評価値を復元
+      parsedMoves.forEach((mv, i) => {
+        if (!mv.preCandidates?.length) return;
+        const nodeId = tree.mainLineIds[i];
+        if (!nodeId) return;
+        const absCands = mv.preCandidates.map(c => ({ ...c, isAbsolute: true }));
+        dispatch({ type: 'SAVE_CANDIDATES', nodeId, candidates: absCands });
+        const best = absCands.find(c => c.multipv === 1) ?? absCands[0];
+        if (best != null) dispatch({ type: 'UPDATE_EVAL', nodeId, evalScore: best.score });
+      });
       setGameInfo({
         sente: { name: senteName || '先手', mark: '▲', time: '0:00:00' },
         gote:  { name: goteName  || '後手', mark: '△', time: '0:00:00' },
