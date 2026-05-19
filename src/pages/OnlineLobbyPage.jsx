@@ -76,11 +76,6 @@ function beep(freq = 880, dur = 0.08, vol = 0.25) {
   } catch {}
 }
 
-// ─── JWTパース ───────────────────────────────────────────────
-function parseJwt(t) {
-  try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; }
-}
-
 function mustPromote(pieceType, toRow, player) {
   const b = pieceType.startsWith('+') ? pieceType.slice(1) : pieceType;
   if (player === 1) { if (b==='P'||b==='L') return toRow===0; if (b==='N') return toRow<=1; }

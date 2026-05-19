@@ -3,11 +3,11 @@
  * 詰将棋一覧ページ  /tsume/category/:moves
  * moves: 1-5 | 7-11 | 13+ | all
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Heart, ChevronRight, Lock, Shuffle, User } from 'lucide-react';
+import { Heart, ChevronRight, Lock, Shuffle, User, CheckCircle } from 'lucide-react';
 import TsumeNav from '../components/TsumeNav.jsx';
 import AccountMenu from '../components/AccountMenu.jsx';
 import { useAccountSettings } from '../hooks/useAccountSettings.jsx';
@@ -141,10 +141,25 @@ export default function TsumeListPage() {
   const { moves } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [items,     setItems]     = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [sort,      setSort]      = useState('recent');
-  const [sourceTab, setSourceTab] = useState('user'); // 'user' | 'generator'
+  const PAGE_SIZE = 40;
+
+  const [items,       setItems]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore,     setHasMore]     = useState(true);
+  const [offset,      setOffset]      = useState(0);
+  const [sort,        setSort]        = useState('recent');
+  const [sourceTab,   setSourceTab]   = useState(
+    () => localStorage.getItem('tsume_list_tab') === 'generator' ? 'generator' : 'user'
+  );
+  const [unsolvedOnly, setUnsolvedOnly] = useState(() => {
+  // ブラウザから保存されたデータを取得
+    const saved = localStorage.getItem('tsume_unsolved_only');
+    // データが 'true' なら true、それ以外（データがない、または 'false'）なら false にする
+    return saved === 'true';
+  });
+  const sentinelRef = useRef(null);
+  const fetchingRef = useRef(false); // 二重フェッチ防止
 
   const label = t(`tsume.categories.${moves}`) || t('tsume.categories.all');
 
@@ -155,16 +170,47 @@ export default function TsumeListPage() {
   }, []);
   const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
 
+  const fetchItems = useCallback(async (currentOffset, reset) => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    if (reset) setLoading(true); else setLoadingMore(true);
+    try {
+      const params = new URLSearchParams({
+        sort, limit: String(PAGE_SIZE), offset: String(currentOffset), source: sourceTab,
+      });
+      if (moves && moves !== 'all') params.set('moves', moves);
+      if (unsolvedOnly && authInfo) params.set('unsolved', '1');
+      const r = await fetch(`${CLOUD_API}/api/tsume/list?${params}`);
+      const d = await r.json();
+      if (d.ok) {
+        setItems(prev => reset ? d.items : [...prev, ...d.items]);
+        setHasMore(d.hasMore);
+        setOffset(currentOffset + d.items.length);
+      }
+    } catch (_) {}
+    finally {
+      if (reset) setLoading(false); else setLoadingMore(false);
+      fetchingRef.current = false;
+    }
+  }, [moves, sort, sourceTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // sort / tab / moves / unsolved が変わったらリセット
   useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ sort, limit: '100', source: sourceTab });
-    if (moves && moves !== 'all') params.set('moves', moves);
-    fetch(`${CLOUD_API}/api/tsume/list?${params}`)
-      .then(r => r.json())
-      .then(d => { if (d.ok) setItems(d.items); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [moves, sort, sourceTab]);
+    setItems([]); setOffset(0); setHasMore(true);
+    fetchItems(0, true);
+  }, [moves, sort, sourceTab, unsolvedOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sentinel が見えたら追加読み込み
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasMore && !loadingMore && !loading) {
+        fetchItems(offset, false);
+      }
+    }, { rootMargin: '200px' });
+    obs.observe(sentinelRef.current);
+    return () => obs.disconnect();
+  }, [hasMore, loadingMore, loading, offset, fetchItems]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white lg:ml-64 pb-16 lg:pb-0">
@@ -201,6 +247,26 @@ export default function TsumeListPage() {
               </button>
             ))}
           </div>
+          {/* 未クリアフィルター (ログイン時のみ) */}
+         {authInfo && (
+            <button
+              onClick={() => {
+                // 1. 次の状態（いまの逆）を計算
+                const nextValue = !unsolvedOnly;
+                // 2. Reactの状態を更新
+                setUnsolvedOnly(nextValue);
+                // 3. ブラウザ（localStorage）に文字列として保存
+                localStorage.setItem('tsume_unsolved_only', String(nextValue));
+              }}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors border
+                ${unsolvedOnly
+                  ? 'bg-emerald-600/20 border-emerald-500/60 text-emerald-300'
+                  : 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white'}`}
+            >
+              <CheckCircle size={11} />
+              未クリア
+            </button>
+          )}
           {authInfo ? (
             <AccountMenu
               email={authInfo.email}
@@ -228,7 +294,7 @@ export default function TsumeListPage() {
           ].map(({ key, label: tabLabel, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => setSourceTab(key)}
+              onClick={() => { setSourceTab(key); localStorage.setItem('tsume_list_tab', key); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors border-b-2
                 ${sourceTab === key
                   ? 'border-blue-500 text-blue-300'
@@ -258,12 +324,25 @@ export default function TsumeListPage() {
             <p className="text-gray-500 text-center py-16">{t('tsume.noItems')}</p>
           ) : (
             <>
-              <p className="text-xs text-gray-500 mb-4">{items.length} 件</p>
+              <p className="text-xs text-gray-500 mb-4">{items.length} 件{hasMore ? '以上' : ''}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {items.map(item => (
                   <GridCard key={item.token} item={item} />
                 ))}
               </div>
+              {/* 無限スクロール用センチネル */}
+              <div ref={sentinelRef} className="h-1" />
+              {loadingMore && (
+                <div className="flex justify-center py-6">
+                  <svg className="animate-spin w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                  </svg>
+                </div>
+              )}
+              {!hasMore && items.length > 0 && (
+                <p className="text-center text-xs text-gray-600 py-6">すべて表示しました</p>
+              )}
             </>
           )}
         </div>

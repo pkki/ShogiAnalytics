@@ -329,6 +329,14 @@ export default function TsumePage() {
       .catch(e => { setErrorMsg(e.message); setLoadStatus('error'); });
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 正解時に解答記録を送信
+  useEffect(() => {
+    if (status !== 'solved') return;
+    const uid = localStorage.getItem('shogi_uid');
+    if (!uid) return;
+    fetch(`${CLOUD_API}/api/tsume/${token}/solve`, { method: 'POST', credentials: 'include' }).catch(() => {});
+  }, [status, token]);
+
   // 最近の詰将棋
   useEffect(() => {
     fetch(`${CLOUD_API}/api/tsume/list?sort=recent&limit=12`)
@@ -914,7 +922,7 @@ export default function TsumePage() {
                   <Bookmark size={16} fill={myBookmark ? 'currentColor' : 'none'} />
                   <span>{bookmarks}</span>
                 </button>
-                {!myToken && (
+                {!myUserId && (
                   <p className="text-xs text-gray-600 ml-1">
                     <Link to="/login" reloadDocument className="text-blue-500 hover:text-blue-400">ログイン</Link>
                     して評価できます
