@@ -513,13 +513,21 @@ export default function WeaknessQuizPage() {
         analyzePositionForPv(nb, nh, nextPlayer, quiz.moveNumber + 1).then(pvUSI => {
           if (analysisIdRef.current !== myId) return; // キャンセル済み
           setEngineAnalyzing(false);
-          if (pvUSI) {
-            const contBoards = computePvBoardsFromUSI(pvUSI, nb, nh, nextPlayer);
-            const allBoards  = [wrongEntry, ...contBoards.slice(1)];
+
+          // エンジンPVが2手以上あれば使用（WASM/YaneuraOu の場合）
+          const contBoards = pvUSI ? computePvBoardsFromUSI(pvUSI, nb, nh, nextPlayer) : [];
+          const allBoards  = [wrongEntry, ...contBoards.slice(1)];
+          if (allBoards.length >= 3) {
             setPvBoards(allBoards);
-            if (allBoards.length > 1) setPvAnim(true);
+            setPvAnim(true);
+            return;
           }
-          // pvUSI なし → pvBoards=[wrongEntry] のまま → 不正解オーバーレイへ
+          // Alpha-Beta は1手しか返さないため、保存済みの正解手順を代わりに表示
+          const bestBoards = computePvBoards(quiz.bestPvJP, quiz.boardBeforeMove, quiz.handsBeforeMove);
+          if (bestBoards.length > 1) {
+            setPvBoards(bestBoards);
+            setPvAnim(true);
+          }
         });
       }
       // エンジンOFF → pvBoards=[wrongEntry]、pvAnim=false → 不正解オーバーレイへ
