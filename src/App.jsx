@@ -999,6 +999,10 @@ export default function App() {
   });
   const [authEmail, setAuthEmail] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // /auth/me の確認が完了するまで true (ログインリダイレクトを遅延させる)
+  const [authChecking, setAuthChecking] = useState(
+    import.meta.env.VITE_USE_WEBRTC === 'true'
+  );
 
   // 起動時セッション確認: Cookie が有効なら userId・email を取得し、Cookie を更新
   useEffect(() => {
@@ -1013,8 +1017,9 @@ export default function App() {
           localStorage.setItem('shogi_uid', data.userId);
           localStorage.setItem('shogi_email', data.email || '');
         }
+        setAuthChecking(false);
       })
-      .catch(() => {});
+      .catch(() => { setAuthChecking(false); });
     // セッション Cookie を自動延長
     fetch(`${CLOUD_API}/auth/refresh`, { method: 'POST', credentials: 'include' }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2935,6 +2940,9 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       )}
     </>
   );
+
+  // セッション確認中は何も表示しない（リダイレクト抑制）
+  if (authChecking) return null;
 
   // 未ログイン → ログインページへリダイレクト (フルリロードで COOP ヘッダーをリセット)
   if (!authToken) {
