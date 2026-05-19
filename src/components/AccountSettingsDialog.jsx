@@ -164,7 +164,7 @@ export default function AccountSettingsDialog({ settings, onClose, onSave, prefe
           )}
 
           {/* ブラウザ通知 */}
-          {pushSupported && authToken && (
+          {pushSupported && (
             <div>
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                 ブラウザ通知
