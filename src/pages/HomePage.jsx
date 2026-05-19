@@ -187,7 +187,7 @@ function FaqItem({ q, a }) {
 // ── お問い合わせフォーム ─────────────────────────────────────
 function ContactForm() {
   const { t } = useTranslation();
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('shogi_jwt') : null;
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('shogi_uid') : null;
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [tsToken, setTsToken] = useState('');
@@ -207,7 +207,8 @@ function ContactForm() {
     try {
       const res = await fetch(`${API}/api/contact`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, body, turnstileToken: tsToken }),
       });
       const json = await res.json();
@@ -302,7 +303,7 @@ export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userCount, setUserCount] = useState(null);
-  const isLoggedIn = !!localStorage.getItem('shogi_jwt');
+  const isLoggedIn = !!localStorage.getItem('shogi_uid');
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 30);

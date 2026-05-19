@@ -27,8 +27,7 @@ function isPWAOrAPK() {
 }
 
 function RootPage() {
-  const token = localStorage.getItem('shogi_jwt');
-  if (token && isPWAOrAPK()) return <Navigate to="/app" replace />;
+  if (isPWAOrAPK()) return <Navigate to="/app" replace />;
   return <HomePage />;
 }
 

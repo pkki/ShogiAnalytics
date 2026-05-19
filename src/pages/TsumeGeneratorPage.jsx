@@ -142,14 +142,11 @@ function engineParams(moves) {
 export default function TsumeGeneratorPage() {
   const navigate = useNavigate();
   const authInfo = useMemo(() => {
-    const tok = localStorage.getItem('shogi_jwt');
-    if (!tok) return null;
-    try {
-      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId, token: tok };
-    } catch { return null; }
+    const userId = localStorage.getItem('shogi_uid');
+    const email  = localStorage.getItem('shogi_email');
+    return userId ? { userId, email } : null;
   }, []);
-  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
 
   const [difficulty,      setDifficulty]      = useState(3);
   const [forceEngine,     setForceEngine]     = useState(false);
@@ -202,13 +199,13 @@ export default function TsumeGeneratorPage() {
   // ── エンジン接続 ──────────────────────────────────────────────────
 
   useEffect(() => {
-    const token = localStorage.getItem('shogi_jwt');
-    if (!token) return;
+    const userId = localStorage.getItem('shogi_uid');
+    if (!userId) return;
 
     setEngineStatus('connecting');
     const socket = import.meta.env.VITE_USE_WEBRTC === 'true' && isWebRTCAvailable()
-      ? createWebRTCSocket(token)
-      : createWebSocketRelaySocket(token);
+      ? createWebRTCSocket(userId)
+      : createWebSocketRelaySocket(userId);
     engineSocketRef.current = socket;
 
     socket.on('connect',       () => {});
@@ -331,16 +328,13 @@ export default function TsumeGeneratorPage() {
   // 生成された局面を公開する
   async function publishPuzzle(puzzleData) {
     if (!publishEnabled) return;
-    const authToken = localStorage.getItem('shogi_jwt');
-    if (!authToken) return; // 未ログインは投稿しない
+    if (!localStorage.getItem('shogi_uid')) return; // 未ログインは投稿しない
     try {
       const title = `${puzzleData.numMoves}手詰め（AI生成）`;
       const res = await fetch(`${CLOUD_API}/api/tsume`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
           puzzle: {
@@ -717,7 +711,7 @@ export default function TsumeGeneratorPage() {
                       || mp.type === 'N' && (attacker === 1 ? r <= 1 : r >= 7);
             const inZone = attacker === 1 ? (r <= 2 || selected.row <= 2) : (r >= 6 || selected.row >= 6);
             if (must) { executeAttackerMove({ ...move, promote: true }); return; }
-            if (inZone) { setShowPromo(move); return; }
+            if (inZone) { setShowPromo({ ...move, base: mp.type, player: attacker }); return; }
           }
         }
         executeAttackerMove(move); return;
@@ -829,7 +823,12 @@ export default function TsumeGeneratorPage() {
             <AccountMenu
               email={authInfo.email}
               userId={authInfo.userId}
-              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onLogout={() => {
+                fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+                localStorage.removeItem('shogi_uid');
+                localStorage.removeItem('shogi_email');
+                navigate('/login');
+              }}
               onShowSettings={onShowSettings}
             />
           ) : (
@@ -1071,6 +1070,8 @@ export default function TsumeGeneratorPage() {
                         onCellClick={showAnswer ? undefined : handleCellClick}
                         activePlayer={currentPlayer}
                         flipped={flipped}
+                        promoteOverlay={showPromo}
+                        onPromoteChoice={p => { executeAttackerMove({ ...showPromo, promote: p }); setShowPromo(null); }}
                       />
                     </div>
                     <div className="hidden lg:flex self-stretch">
@@ -1187,26 +1188,6 @@ export default function TsumeGeneratorPage() {
         </div>
       )}
 
-      {/* 成り確認ダイアログ */}
-      {showPromo && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-          onClick={() => { executeAttackerMove({ ...showPromo, promote: false }); setShowPromo(null); }}>
-          <div className="bg-gray-800 border border-gray-600 rounded-2xl p-5 flex flex-col gap-3 shadow-2xl"
-            onClick={e => e.stopPropagation()}>
-            <p className="text-white text-center font-bold">成りますか？</p>
-            <div className="flex gap-3">
-              <button onClick={() => { executeAttackerMove({ ...showPromo, promote: true }); setShowPromo(null); }}
-                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors">
-                成る
-              </button>
-              <button onClick={() => { executeAttackerMove({ ...showPromo, promote: false }); setShowPromo(null); }}
-                className="px-6 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition-colors">
-                成らない
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

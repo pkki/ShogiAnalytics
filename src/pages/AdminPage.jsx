@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Users, Activity, Database, BookOpen, Mail, Share2, Shield, UserCheck } from 'lucide-react';
+import { RefreshCw, Users, Activity, Database, BookOpen, Mail, Share2, Shield, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 const API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:8080';
 const LIMIT = 50;
-
-function authHeaders() {
-  const token = localStorage.getItem('shogi_jwt');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+const CONTACT_LIMIT = 20;
 
 async function apiFetch(path) {
-  const res = await fetch(`${API}${path}`, { headers: authHeaders() });
+  const res = await fetch(`${API}${path}`, { credentials: 'include' });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
   return json;
@@ -84,6 +80,15 @@ export default function AdminPage() {
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
 
+  // お問い合わせ
+  const [contacts, setContacts] = useState([]);
+  const [contactTotal, setContactTotal] = useState(0);
+  const [contactPage, setContactPage] = useState(1);
+  const [contactSearch, setContactSearch] = useState('');
+  const [contactSearchInput, setContactSearchInput] = useState('');
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [expandedContact, setExpandedContact] = useState(null);
+
   // 統計 + オンライン (マウント時 + 手動更新)
   async function loadOverview() {
     setStatsLoading(true);
@@ -118,11 +123,30 @@ export default function AdminPage() {
     }
   }
 
+  // お問い合わせ一覧
+  async function loadContacts() {
+    setContactsLoading(true);
+    try {
+      const q = new URLSearchParams({ page: contactPage, limit: CONTACT_LIMIT });
+      if (contactSearch) q.set('search', contactSearch);
+      const data = await apiFetch(`/admin/contacts?${q}`);
+      setContacts(data.contacts || []);
+      setContactTotal(data.total || 0);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setContactsLoading(false);
+    }
+  }
+
   // 初期ロード
   useEffect(() => { loadOverview(); }, []); // eslint-disable-line
 
   // ページ / 検索 / ソート 変化でユーザー再取得
   useEffect(() => { loadUsers(); }, [page, search, sort]); // eslint-disable-line
+
+  // お問い合わせページ / 検索変化で再取得
+  useEffect(() => { loadContacts(); }, [contactPage, contactSearch]); // eslint-disable-line
 
   // オンラインを30秒ごとに自動更新
   useEffect(() => {
@@ -153,6 +177,13 @@ export default function AdminPage() {
   function handleRefresh() {
     loadOverview();
     loadUsers();
+    loadContacts();
+  }
+
+  function handleContactSearch(e) {
+    e.preventDefault();
+    setContactSearch(contactSearchInput);
+    setContactPage(1);
   }
 
   const isAccessDenied = error.includes('管理者権限') || error.includes('403') || error.includes('Forbidden');
@@ -420,6 +451,117 @@ export default function AdminPage() {
                     className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed
                                border border-gray-700 rounded transition-colors text-gray-400">
                     »
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── お問い合わせ一覧 ── */}
+        <section>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+              お問い合わせ
+              <span className="ml-2 text-gray-700 normal-case font-normal">
+                {contactTotal.toLocaleString()}件
+              </span>
+            </h2>
+            <form onSubmit={handleContactSearch} className="flex gap-1">
+              <input
+                value={contactSearchInput}
+                onChange={e => setContactSearchInput(e.target.value)}
+                placeholder="メール / 件名 / 内容で検索"
+                className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-xs text-white
+                           placeholder-gray-500 outline-none focus:border-blue-500 transition-colors w-52"
+              />
+              <button type="submit"
+                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg text-xs text-gray-300 transition-colors">
+                検索
+              </button>
+              {contactSearch && (
+                <button type="button" onClick={() => { setContactSearch(''); setContactSearchInput(''); setContactPage(1); }}
+                  className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                  ✕
+                </button>
+              )}
+            </form>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+            {contactTotal === 0 && !contactsLoading ? (
+              <div className="px-4 py-10 text-center text-gray-600 text-sm">
+                お問い合わせはまだありません
+              </div>
+            ) : (
+              <div className={contactsLoading ? 'opacity-50' : ''}>
+                {contacts.map((c) => (
+                  <div key={c.id} className="border-b border-gray-800 last:border-0">
+                    {/* 一覧行 */}
+                    <button
+                      className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors flex items-start gap-3"
+                      onClick={() => setExpandedContact(expandedContact === c.id ? null : c.id)}
+                    >
+                      <Avatar name={c.display_name} email={c.email} color={c.avatar_color} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-white truncate">{c.subject}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-gray-400 truncate">
+                            {c.display_name ? `${c.display_name} ` : ''}{c.email}
+                          </span>
+                          <span className="text-[10px] text-gray-600 shrink-0">{formatDate(c.created_at)}</span>
+                        </div>
+                        {expandedContact !== c.id && (
+                          <p className="text-[11px] text-gray-500 mt-0.5 truncate">{c.body}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-gray-600 mt-0.5">
+                        {expandedContact === c.id
+                          ? <ChevronUp size={14} />
+                          : <ChevronDown size={14} />}
+                      </div>
+                    </button>
+                    {/* 展開: 本文全文 */}
+                    {expandedContact === c.id && (
+                      <div className="px-4 pb-4 ml-10">
+                        <div className="bg-gray-800/60 rounded-xl p-3 border border-gray-700">
+                          <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">{c.body}</p>
+                        </div>
+                        <div className="mt-2 flex items-center gap-3">
+                          <span className="text-[10px] text-gray-600 font-mono">{c.id}</span>
+                          <a href={`mailto:${c.email}?subject=Re: ${encodeURIComponent(c.subject)}`}
+                            className="text-[10px] text-blue-400 hover:text-blue-300 transition-colors">
+                            返信する →
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ページネーション */}
+            {Math.ceil(contactTotal / CONTACT_LIMIT) > 1 && (
+              <div className="px-4 py-3 border-t border-gray-800 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {((contactPage - 1) * CONTACT_LIMIT + 1).toLocaleString()}–{Math.min(contactPage * CONTACT_LIMIT, contactTotal).toLocaleString()} / {contactTotal.toLocaleString()}件
+                </span>
+                <div className="flex items-center gap-1">
+                  <button disabled={contactPage <= 1} onClick={() => setContactPage(p => p - 1)}
+                    className="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed
+                               border border-gray-700 rounded transition-colors text-gray-300">
+                    前へ
+                  </button>
+                  <span className="px-3 py-1 text-xs text-gray-400">
+                    {contactPage} / {Math.ceil(contactTotal / CONTACT_LIMIT)}
+                  </span>
+                  <button disabled={contactPage >= Math.ceil(contactTotal / CONTACT_LIMIT)} onClick={() => setContactPage(p => p + 1)}
+                    className="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed
+                               border border-gray-700 rounded transition-colors text-gray-300">
+                    次へ
                   </button>
                 </div>
               </div>

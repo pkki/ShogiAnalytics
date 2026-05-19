@@ -32,25 +32,6 @@ function Spinner() {
   );
 }
 
-function PromotionDialog({ onChoose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-800 border border-gray-600 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl">
-        <p className="text-white font-bold text-base">成りますか？</p>
-        <div className="flex gap-3">
-          <button onClick={() => onChoose(true)}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm">
-            成る
-          </button>
-          <button onClick={() => onChoose(false)}
-            className="px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-xl transition-colors text-sm">
-            成らない
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function cp(b) { return b.map(r => r.map(c => c ? { ...c } : null)); }
 function ch(h) { return { 1: { ...h[1] }, 2: { ...h[2] } }; }
@@ -84,14 +65,11 @@ export default function WeaknessQuizPage() {
   const navigate = useNavigate();
 
   const authInfo = useMemo(() => {
-    const tok = localStorage.getItem('shogi_jwt');
-    if (!tok) return null;
-    try {
-      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId, token: tok };
-    } catch { return null; }
+    const userId = localStorage.getItem('shogi_uid');
+    const email  = localStorage.getItem('shogi_email');
+    return userId ? { userId, email } : null;
   }, []);
-  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
 
   // quizState: idle | loading | ready | answered | error
   const [quizState,    setQuizState]    = useState('idle');
@@ -253,7 +231,7 @@ export default function WeaknessQuizPage() {
     localStorage.setItem('quiz_voice', v);
   }
 
-  const authToken  = authInfo?.token;
+  const authToken  = authInfo?.userId;
   const attacker   = quiz?.player ?? 1;
 
   // flipped=false: 先手(1)下, 後手(2)上  /  flipped=true: 後手(2)下, 先手(1)上
@@ -335,7 +313,7 @@ export default function WeaknessQuizPage() {
     try {
       let games = gameCache;
       if (!games) {
-        const res  = await fetch(`${CLOUD_API}/api/kif`, { headers: { Authorization: `Bearer ${authToken}` } });
+        const res  = await fetch(`${CLOUD_API}/api/kif`, { credentials: 'include' });
         const data = await res.json();
         if (!data.ok || !data.kifs?.length) {
           setQuizState('error');
@@ -350,7 +328,7 @@ export default function WeaknessQuizPage() {
       const debugLog = [];
 
       for (const game of shuffled.slice(0, 15)) {
-        const res  = await fetch(`${CLOUD_API}/api/kif/${game.id}`, { headers: { Authorization: `Bearer ${authToken}` } });
+        const res  = await fetch(`${CLOUD_API}/api/kif/${game.id}`, { credentials: 'include' });
         const data = await res.json();
         if (!data.ok) { debugLog.push(`${game.title}: fetch失敗`); continue; }
         const kifText  = data.kif.content;
@@ -568,7 +546,7 @@ export default function WeaknessQuizPage() {
                       || (mp.type === 'N' && (attacker === 1 ? r <= 1 : r >= 7));
             const inZone = attacker === 1 ? (r <= 2 || selected.row <= 2) : (r >= 6 || selected.row >= 6);
             if (must)   { executeMove({ ...move, promote: true  }); return; }
-            if (inZone) { setShowPromo(move); return; }
+            if (inZone) { setShowPromo({ ...move, base: mp.type, player: attacker }); return; }
           }
         }
         executeMove(move); return;
@@ -664,7 +642,12 @@ export default function WeaknessQuizPage() {
           </div>
           {authInfo ? (
             <AccountMenu email={authInfo.email} userId={authInfo.userId}
-              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onLogout={() => {
+                fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+                localStorage.removeItem('shogi_uid');
+                localStorage.removeItem('shogi_email');
+                navigate('/login');
+              }}
               onShowSettings={onShowSettings} />
           ) : (
             <Link to="/login"
@@ -710,6 +693,8 @@ export default function WeaknessQuizPage() {
                   onCellClick={quizState === 'ready' ? handleCellClick : undefined}
                   activePlayer={attacker}
                   flipped={flipped}
+                  promoteOverlay={showPromo}
+                  onPromoteChoice={handlePromotionChoice}
                 />
               </div>
               {/* PC右駒台 */}
@@ -1004,7 +989,6 @@ export default function WeaknessQuizPage() {
         </div>
       )}
 
-      {showPromo && <PromotionDialog onChoose={handlePromotionChoice} />}
     </div>
   );
 }

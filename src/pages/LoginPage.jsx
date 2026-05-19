@@ -13,6 +13,7 @@ async function apiPost(path, body, errorFallback = 'Server error') {
   const res = await fetch(`${API}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(body),
   });
   const json = await res.json();
@@ -100,8 +101,8 @@ export default function LoginPage({ onSuccess }) {
     setError(''); setLoading(true);
     try {
       const res = await apiPost('/auth/google', { idToken: credential });
-      localStorage.setItem('shogi_jwt', res.token);
-      onSuccess?.(res.token);
+      if (res.userId) { localStorage.setItem('shogi_uid', res.userId); localStorage.setItem('shogi_email', res.email || ''); }
+      onSuccess?.();
       window.location.href = '/app'; // フルリロードで COOP: same-origin を取得
     } catch (err) {
       setError(err.message);
@@ -119,8 +120,8 @@ export default function LoginPage({ onSuccess }) {
     setError(''); setLoading(true);
     try {
       const res = await apiPost('/auth/login', { email, password, turnstileToken: tsToken });
-      localStorage.setItem('shogi_jwt', res.token);
-      onSuccess?.(res.token);
+      if (res.userId) { localStorage.setItem('shogi_uid', res.userId); localStorage.setItem('shogi_email', res.email || ''); }
+      onSuccess?.();
       window.location.href = '/app';
     } catch (err) {
       if (err.message.includes('認証が完了していません')) {

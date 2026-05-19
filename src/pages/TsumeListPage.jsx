@@ -149,14 +149,11 @@ export default function TsumeListPage() {
   const label = t(`tsume.categories.${moves}`) || t('tsume.categories.all');
 
   const authInfo = useMemo(() => {
-    const token = localStorage.getItem('shogi_jwt');
-    if (!token) return null;
-    try {
-      const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId, token };
-    } catch { return null; }
+    const userId = localStorage.getItem('shogi_uid');
+    const email  = localStorage.getItem('shogi_email');
+    return userId ? { userId, email } : null;
   }, []);
-  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
 
   useEffect(() => {
     setLoading(true);
@@ -208,7 +205,12 @@ export default function TsumeListPage() {
             <AccountMenu
               email={authInfo.email}
               userId={authInfo.userId}
-              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onLogout={() => {
+                fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+                localStorage.removeItem('shogi_uid');
+                localStorage.removeItem('shogi_email');
+                navigate('/login');
+              }}
               onShowSettings={onShowSettings}
             />
           ) : (

@@ -17,7 +17,7 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
-async function subscribePush(authToken) {
+async function subscribePush() {
   const reg = await navigator.serviceWorker.ready;
   const vapidKey = await getVapidKey();
   const sub = await reg.pushManager.subscribe({
@@ -27,19 +27,21 @@ async function subscribePush(authToken) {
   const json = sub.toJSON();
   await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
   });
   return sub;
 }
 
-async function unsubscribePush(authToken) {
+async function unsubscribePush() {
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
   await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ endpoint: sub.endpoint }),
   });
   await sub.unsubscribe();
@@ -51,7 +53,7 @@ const NOTIF_TYPES = [
   { key: 'notifTsumeLike',     label: '詰将棋のいいね' },
 ];
 
-export default function AccountSettingsDialog({ settings, onClose, onSave, preferWebSocket, onToggleWebSocket, authToken }) {
+export default function AccountSettingsDialog({ settings, onClose, onSave, preferWebSocket, onToggleWebSocket }) {
   const [swarUsername, setSwarUsername] = useState(settings?.swarUsername ?? '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -73,17 +75,16 @@ export default function AccountSettingsDialog({ settings, onClose, onSave, prefe
   }, [pushSupported]);
 
   async function handleTogglePush() {
-    if (!authToken) return;
     setPushToggling(true);
     try {
       if (pushSubscribed) {
-        await unsubscribePush(authToken);
+        await unsubscribePush();
         setPushSubscribed(false);
       } else {
         const perm = await Notification.requestPermission();
         setPushPermission(perm);
         if (perm !== 'granted') return;
-        await subscribePush(authToken);
+        await subscribePush();
         setPushSubscribed(true);
       }
     } catch (e) {

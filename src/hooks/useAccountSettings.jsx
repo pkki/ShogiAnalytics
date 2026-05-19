@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
  * 設定ダイアログをどのページからでも開けるようにするフック。
  * AccountMenu の onShowSettings に渡す関数と、ダイアログ要素を返す。
  */
-export function useAccountSettings(authToken) {
+export function useAccountSettings(_authToken) {
   const [show, setShow] = useState(false);
   const [settings, setSettings] = useState({});
   const [preferWebSocket, setPreferWebSocket] = useState(
@@ -15,30 +15,26 @@ export function useAccountSettings(authToken) {
   );
 
   const onShowSettings = useCallback(async () => {
-    if (authToken) {
-      try {
-        const res = await fetch(`${API_BASE}/api/settings`, {
-          headers: { Authorization: `Bearer ${authToken}` },
-        });
-        const data = await res.json();
-        if (data?.settings) setSettings(data.settings);
-      } catch (_) {}
-    }
+    try {
+      const res = await fetch(`${API_BASE}/api/settings`, { credentials: 'include' });
+      const data = await res.json();
+      if (data?.settings) setSettings(data.settings);
+    } catch (_) {}
     setShow(true);
-  }, [authToken]);
+  }, []);
 
   const onSave = useCallback(async (patch) => {
-    if (!authToken) return;
     try {
       const res = await fetch(`${API_BASE}/api/settings`, {
         method: 'PUT',
-        headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(patch),
       });
       const data = await res.json();
       if (data?.ok) setSettings(data.settings ?? {});
     } catch (_) {}
-  }, [authToken]);
+  }, []);
 
   const dialog = show ? (
     <AccountSettingsDialog
@@ -50,7 +46,6 @@ export function useAccountSettings(authToken) {
         setPreferWebSocket(v);
         localStorage.setItem('shogi_prefer_ws', v ? '1' : '0');
       }}
-      authToken={authToken}
     />
   ) : null;
 

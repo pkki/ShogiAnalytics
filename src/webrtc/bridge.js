@@ -19,13 +19,7 @@ import { io as signalingIO } from 'socket.io-client';
 const SERVER_URL   = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 const STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
-function parseJwt(token) {
-  try { return JSON.parse(atob(token.split('.')[1])); }
-  catch { return {}; }
-}
-
-export function createWebRTCSocket(token) {
-  const { userId } = parseJwt(token);
+export function createWebRTCSocket(userId) {
 
   const handlers   = {};
   const sendQueue  = [];
@@ -194,9 +188,9 @@ export function createWebRTCSocket(token) {
 
   // ── シグナリング接続 ─────────────────────────────────────
   sigSk = signalingIO(SERVER_URL, {
-    query:      { role: 'frontend' },
-    auth:       { token },
-    transports: ['websocket', 'polling'],
+    query:           { role: 'frontend' },
+    withCredentials: true,
+    transports:      ['websocket', 'polling'],
   });
 
   sigSk.on('connect', () => {
@@ -297,7 +291,6 @@ export function createWebRTCSocket(token) {
   sigSk.on('connect_error', (err) => {
     console.error('[bridge] Signaling failed:', err.message);
     if (err.message.includes('invalid') || err.message.includes('token') || err.message.includes('expired')) {
-      localStorage.removeItem('shogi_jwt');
       fire('auth_error', err);
     }
     onError('signaling: ' + err.message);
@@ -377,8 +370,7 @@ export function isWebRTCAvailable() {
 //  local-agent とメッセージを双方向転送する。
 //  外部 API は createWebRTCSocket と同一 (.on/.emit/.disconnect)
 // ============================================================
-export function createWebSocketRelaySocket(token) {
-  const { userId } = parseJwt(token);
+export function createWebSocketRelaySocket(userId) {
 
   const handlers  = {};
   let sigSk        = null;
@@ -420,9 +412,9 @@ export function createWebSocketRelaySocket(token) {
   }
 
   sigSk = signalingIO(SERVER_URL, {
-    query:      { role: 'frontend' },
-    auth:       { token },
-    transports: ['websocket', 'polling'],
+    query:           { role: 'frontend' },
+    withCredentials: true,
+    transports:      ['websocket', 'polling'],
   });
 
   sigSk.on('connect', () => {
@@ -433,7 +425,6 @@ export function createWebSocketRelaySocket(token) {
   sigSk.on('connect_error', (err) => {
     console.error('[relay] Signaling error:', err.message);
     if (err.message.includes('invalid') || err.message.includes('token') || err.message.includes('expired')) {
-      localStorage.removeItem('shogi_jwt');
       fire('auth_error', err);
     }
     fire('connect_error', err);

@@ -36,28 +36,19 @@ export default function NavigationPanel({
 
   return (
     <div className="px-3 flex flex-col gap-1.5">
-      {/* 分岐バナー */}
+      {/* 分岐インジケーター（スライダー行と同じ高さに収める） */}
       {isOnBranch && (
-        <div className="flex flex-col gap-1.5 bg-purple-900/40 border border-purple-700/60 rounded-xl px-3 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <GitBranch size={14} className="text-purple-400 shrink-0" />
-              <span className="text-xs text-purple-300 font-semibold">{t('nav2.branch')}</span>
-            </div>
-            <button
-              onClick={onReturnToMain}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500
-                rounded-lg text-white text-xs font-bold transition-colors shrink-0"
-            >
-              <CornerUpLeft size={12} />
-              {t('nav2.returnToMain')}
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            <NavBtn icon={<ChevronsLeft size={16} />}  label={t('nav2.toMainBranch')} onClick={onReturnToMain} />
-            <NavBtn icon={<ChevronLeft size={16} />}   label={t('nav2.prevMove')} onClick={onBranchPrev} />
-            <NavBtn icon={<ChevronRight size={16} />}  label={t('nav2.nextMove')} onClick={onBranchNext} disabled={!hasBranchNext} />
-          </div>
+        <div className="flex items-center gap-2 px-1">
+          <GitBranch size={12} className="text-purple-400 shrink-0" />
+          <span className="text-xs text-purple-300 font-semibold flex-1 truncate">{t('nav2.branch')}</span>
+          <button
+            onClick={onReturnToMain}
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500
+              rounded-lg text-white text-xs font-bold transition-colors shrink-0"
+          >
+            <CornerUpLeft size={11} />
+            {t('nav2.returnToMain')}
+          </button>
         </div>
       )}
 
@@ -89,12 +80,18 @@ export default function NavigationPanel({
           )}
         </div>
 
-        {!isOnBranch && (
+        {!isOnBranch ? (
           <div className="flex items-center gap-1">
             <NavBtn icon={<ChevronsLeft size={16} />}  label={t('nav2.start')}    onClick={() => moveTo(0)} />
             <NavBtn icon={<ChevronLeft size={16} />}   label={t('nav2.prevMove')} onClick={() => moveTo(safeMove - 1)} />
             <NavBtn icon={<ChevronRight size={16} />}  label={t('nav2.nextMove')} onClick={() => moveTo(safeMove + 1)} />
             <NavBtn icon={<ChevronsRight size={16} />} label={t('nav2.end')}      onClick={() => moveTo(totalMoves)} />
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <NavBtn icon={<ChevronsLeft size={16} />}  label={t('nav2.toMainBranch')} onClick={onReturnToMain} />
+            <NavBtn icon={<ChevronLeft size={16} />}   label={t('nav2.prevMove')}     onClick={onBranchPrev} />
+            <NavBtn icon={<ChevronRight size={16} />}  label={t('nav2.nextMove')}     onClick={onBranchNext} disabled={!hasBranchNext} />
           </div>
         )}
 

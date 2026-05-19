@@ -9,11 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { BookOpen, User, LayoutGrid, Home, Languages, Globe, Shuffle, Target } from 'lucide-react';
 
 function parseUserId() {
-  try {
-    const token = localStorage.getItem('shogi_jwt');
-    if (!token) return null;
-    return JSON.parse(atob(token.split('.')[1])).userId;
-  } catch { return null; }
+  return localStorage.getItem('shogi_uid') || null;
 }
 
 function NavLinks({ userId, onClose }) {

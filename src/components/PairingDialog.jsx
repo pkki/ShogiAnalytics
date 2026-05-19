@@ -10,14 +10,12 @@ import { useTranslation } from 'react-i18next';
 
 const API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
-async function apiPost(path, body, token) {
+async function apiPost(path, body) {
   const res = await fetch(`${API}${path}`, {
-    method:  'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
+    method:      'POST',
+    headers:     { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body:        JSON.stringify(body),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || 'Server error');
@@ -58,7 +56,7 @@ export default function PairingDialog({ pairCode, authToken, onDone }) {
     setCodeError(false);
     setSaving(true);
     try {
-      await apiPost('/agent/confirm-pairing', { code: pairCode, name: agentName }, authToken);
+      await apiPost('/agent/confirm-pairing', { code: pairCode, name: agentName });
       setStep('done');
     } catch (e) {
       setError(e.message);

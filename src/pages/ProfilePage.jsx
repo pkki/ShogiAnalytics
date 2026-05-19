@@ -177,7 +177,7 @@ function MiniBoardPreview({ boardJson }) {
 // ── GridCard ──────────────────────────────────────────────────────
 const CLOUD_API_PROFILE = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 
-function GridCard({ token, title, numMoves, boardJson, likes, authorName, showAuthor, onDelete, myToken }) {
+function GridCard({ token, title, numMoves, boardJson, likes, authorName, showAuthor, onDelete }) {
   const handleDelete = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -185,7 +185,7 @@ function GridCard({ token, title, numMoves, boardJson, likes, authorName, showAu
     try {
       const res = await fetch(`${CLOUD_API_PROFILE}/api/tsume/${token}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${myToken}` },
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.ok) onDelete(token);
@@ -238,27 +238,27 @@ function HandRow({ hands, player, name, flip }) {
   const h = hands[player] || {};
   const pieces = HAND_ORDER.filter(t => (h[t] || 0) > 0);
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 min-h-[36px] ${flip ? 'flex-row-reverse' : ''}`}>
-      <span className="text-[10px] text-gray-500 shrink-0">{name}</span>
-      <span className="text-[10px] text-gray-600 shrink-0">持</span>
+    <div className={`flex items-center gap-2 px-3 py-2 bg-gray-800/60 min-h-[44px] ${flip ? 'flex-row-reverse' : ''}`}>
+      <span className="text-xs text-gray-500 shrink-0">{name}</span>
+      <span className="text-xs text-gray-600 shrink-0">持</span>
       {pieces.length === 0
-        ? <span className="text-[10px] text-gray-600">なし</span>
+        ? <span className="text-xs text-gray-600">なし</span>
         : pieces.map(t => (
             <span key={t} className="inline-flex items-center gap-0.5">
               <span style={{
                 fontWeight: 900,
-                fontSize: 13,
+                fontSize: 16,
                 color: '#111',
                 background: '#e8c96a',
                 borderRadius: 3,
-                padding: '1px 3px',
+                padding: '2px 4px',
                 display: 'inline-block',
                 transform: flip ? 'rotate(180deg)' : 'none',
                 lineHeight: 1.2,
               }}>
                 {PIECE_CHAR[t] || t}
               </span>
-              {h[t] > 1 && <span className="text-[10px] text-gray-400">{h[t]}</span>}
+              {h[t] > 1 && <span className="text-xs text-gray-400">{h[t]}</span>}
             </span>
           ))
       }
@@ -280,7 +280,7 @@ function ReplayViewer({ game, onClose, onAnalyze }) {
   const goteName  = game.gote_name  || game.gote_email?.split('@')[0] || '後手';
   const date = game.finished_at ? new Date(game.finished_at * 1000).toLocaleDateString('ja-JP') : '';
 
-  const btnBase = 'p-1.5 rounded text-gray-400 hover:text-white transition-colors disabled:opacity-25 disabled:cursor-not-allowed';
+  const btnBase = 'p-3 rounded-xl text-gray-400 hover:text-white hover:bg-gray-700 active:bg-gray-600 transition-colors disabled:opacity-25 disabled:cursor-not-allowed';
 
   // keyboard navigation
   useEffect(() => {
@@ -296,7 +296,7 @@ function ReplayViewer({ game, onClose, onAnalyze }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-2"
          onClick={onClose}>
-      <div className="bg-gray-900 rounded-2xl w-full max-w-sm max-h-[95vh] overflow-hidden flex flex-col shadow-2xl"
+      <div className="bg-gray-900 rounded-2xl w-full max-w-lg max-h-[95vh] overflow-hidden flex flex-col shadow-2xl"
            onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -353,19 +353,19 @@ function ReplayViewer({ game, onClose, onAnalyze }) {
         {/* Navigation */}
         <div className="flex items-center justify-center gap-1 px-3 py-2 border-t border-gray-700 shrink-0">
           <button onClick={() => setIdx(0)} disabled={idx === 0} className={btnBase}>
-            <ChevronsLeft size={16} />
+            <ChevronsLeft size={22} />
           </button>
           <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} className={btnBase}>
-            <ChevronLeft size={16} />
+            <ChevronLeft size={22} />
           </button>
-          <span className="text-xs text-gray-400 w-20 text-center tabular-nums">
+          <span className="text-sm text-gray-400 w-24 text-center tabular-nums">
             {idx === 0 ? '初期局面' : `${idx} / ${moves.length}手`}
           </span>
           <button onClick={() => setIdx(i => Math.min(states.length - 1, i + 1))} disabled={idx === states.length - 1} className={btnBase}>
-            <ChevronRight size={16} />
+            <ChevronRight size={22} />
           </button>
           <button onClick={() => setIdx(states.length - 1)} disabled={idx === states.length - 1} className={btnBase}>
-            <ChevronsRight size={16} />
+            <ChevronsRight size={22} />
           </button>
           <button
             onClick={onAnalyze}
@@ -385,21 +385,19 @@ function ReportModal({ game, reportedId, reportedName, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errMsg, setErrMsg] = useState('');
-  const myToken = localStorage.getItem('shogi_jwt');
-  const myUserId = (() => {
-    try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
-  })();
+  const myUserId = localStorage.getItem('shogi_uid');
   const isSente = game.sente_id === myUserId;
   const date = game.finished_at ? new Date(game.finished_at * 1000).toLocaleDateString('ja-JP') : '';
 
   async function handleSubmit() {
-    if (!reason.trim() || !myToken) return;
+    if (!reason.trim() || !myUserId) return;
     setSubmitting(true);
     setErrMsg('');
     try {
       const res = await fetch(`${CLOUD_API}/api/report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${myToken}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId: game.id, reportedId, reason: reason.trim() }),
       });
       const data = await res.json();
@@ -485,21 +483,19 @@ function ReportUserModal({ reportedId, reportedName, games, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errMsg, setErrMsg] = useState('');
-  const myToken = localStorage.getItem('shogi_jwt');
-  const myUserId = (() => {
-    try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
-  })();
+  const myUserId = localStorage.getItem('shogi_uid');
 
   const REASON_LABEL_LOCAL = { resign:'投了', timeout:'時間切れ', checkmate:'詰み', disconnect:'切断' };
 
   async function handleSubmit() {
-    if (!selectedGame || !reason.trim() || !myToken) return;
+    if (!selectedGame || !reason.trim() || !myUserId) return;
     setSubmitting(true);
     setErrMsg('');
     try {
       const res = await fetch(`${CLOUD_API}/api/report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${myToken}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId: selectedGame.id, reportedId, reason: reason.trim() }),
       });
       const data = await res.json();
@@ -666,16 +662,13 @@ export default function ProfilePage() {
     }
   }
 
-  const myToken = localStorage.getItem('shogi_jwt');
   const myAuthInfo = useMemo(() => {
-    if (!myToken) return null;
-    try {
-      const p = JSON.parse(atob(myToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { userId: p.userId, email: p.email, token: myToken };
-    } catch { return null; }
-  }, [myToken]);
+    const userId = localStorage.getItem('shogi_uid');
+    const email  = localStorage.getItem('shogi_email');
+    return userId ? { userId, email } : null;
+  }, []);
   const myUserId = myAuthInfo?.userId ?? null;
-  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(myAuthInfo?.token ?? null);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
   const isMe = myUserId === userId;
 
   // 自分が参加した対局（通報の証拠選択用）
@@ -693,9 +686,7 @@ export default function ProfilePage() {
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const headers = {};
-      if (myToken) headers['Authorization'] = `Bearer ${myToken}`;
-      const res  = await fetch(`${CLOUD_API}/api/profile/${userId}`, { headers });
+      const res  = await fetch(`${CLOUD_API}/api/profile/${userId}`, { credentials: 'include' });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       setProfile(data.profile);
@@ -717,37 +708,36 @@ export default function ProfilePage() {
   }, [userId]);
 
   const loadBookmarks = useCallback(async () => {
-    if (!isMe || !myToken) return;
+    if (!isMe || !myUserId) return;
     try {
       const res  = await fetch(`${CLOUD_API}/api/profile/${userId}/bookmarks`, {
-        headers: { Authorization: `Bearer ${myToken}` },
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.ok) setBookmarks(data.bookmarks || []);
     } catch {}
-  }, [userId, isMe, myToken]);
+  }, [userId, isMe, myUserId]);
 
   const loadGames = useCallback(async () => {
     try {
-      const headers = {};
-      if (myToken) headers['Authorization'] = `Bearer ${myToken}`;
-      const res  = await fetch(`${CLOUD_API}/api/profile/${userId}/games`, { headers });
+      const res  = await fetch(`${CLOUD_API}/api/profile/${userId}/games`, { credentials: 'include' });
       const data = await res.json();
       if (data.ok) setGames(data.games || []);
     } catch {}
-  }, [userId, myToken]);
+  }, [userId]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
   useEffect(() => { if (tab === 'bookmarks') loadBookmarks(); }, [tab, loadBookmarks]);
   useEffect(() => { if (tab === 'games') loadGames(); }, [tab, loadGames]);
 
   async function handleSaveProfile() {
-    if (!myToken) return;
+    if (!myUserId) return;
     setSaving(true);
     try {
       await fetch(`${CLOUD_API}/api/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${myToken}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: editName, bio: editBio, avatarColor: editColor }),
       });
       setProfile(p => ({ ...p, displayName: editName, bio: editBio, avatarColor: editColor }));
@@ -824,7 +814,12 @@ export default function ProfilePage() {
             <AccountMenu
               email={myAuthInfo.email}
               userId={myAuthInfo.userId}
-              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onLogout={() => {
+                fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+                localStorage.removeItem('shogi_uid');
+                localStorage.removeItem('shogi_email');
+                navigate('/login');
+              }}
               onShowSettings={onShowSettings}
             />
           ) : (
@@ -1039,7 +1034,6 @@ export default function ProfilePage() {
                           likes={item.likes}
                           showAuthor={false}
                           onDelete={isMe ? (tok) => setTsumes(prev => prev.filter(t => t.token !== tok)) : undefined}
-                          myToken={isMe ? myToken : undefined}
                         />
                       ))}
                     </div>

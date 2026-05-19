@@ -273,10 +273,8 @@ export default function OnlineLobbyPage() {
     } catch (e) { console.error(e); }
   }
 
-  const jwt    = localStorage.getItem('shogi_jwt') || '';
-  const me     = useMemo(() => parseJwt(jwt), [jwt]);
-  const userId = me?.userId ?? '';
-  const userEmail = me?.email ?? '';
+  const userId    = localStorage.getItem('shogi_uid') || '';
+  const userEmail = localStorage.getItem('shogi_email') || '';
 
   // ─── サーバーデータ ────────────────────────────────────────
   const [myRating,       setMyRating]       = useState(1500);
@@ -372,24 +370,24 @@ export default function OnlineLobbyPage() {
 
   // ─── ログインチェック・初期データ取得 ──────────────────────
   useEffect(() => {
-    if (!jwt || !userId) { navigate('/login'); return; }
+    if (!userId) { navigate('/login'); return; }
 
     const fetchMe = () =>
-      fetch(`${API}/api/online/me`,      { headers: { Authorization:`Bearer ${jwt}` } })
+      fetch(`${API}/api/online/me`,      { credentials:'include' })
         .then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok){ setMyRating(d.rating); setMyGames(d.games); } }).catch(()=>{});
     const fetchAdm = () =>
-      fetch(`${API}/auth/me`,            { headers: { Authorization:`Bearer ${jwt}` } })
+      fetch(`${API}/auth/me`,            { credentials:'include' })
         .then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setIsAdmin(d.isAdmin===true); }).catch(()=>{});
     const fetchLB = () =>
       fetch(`${API}/api/online/leaderboard`)
         .then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setLeaderboard(d.leaderboard||[]); }).catch(()=>{});
     const fetchHist = () =>
-      fetch(`${API}/api/online/history`, { headers: { Authorization:`Bearer ${jwt}` } })
+      fetch(`${API}/api/online/history`, { credentials:'include' })
         .then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setHistory(d.games||[]); }).catch(()=>{});
     fetchMe(); fetchAdm(); fetchLB(); fetchHist();
 
     // ── Socket 接続 ───────────────────────────────────────
-    const socket = io(`${API}/online`, { auth:{ token:jwt }, transports:['websocket','polling'] });
+    const socket = io(`${API}/online`, { withCredentials: true, transports:['websocket','polling'] });
     socketRef.current = socket;
 
     socket.on('wait_list', ({ list }) => setWaitList(list || []));
@@ -579,7 +577,7 @@ export default function OnlineLobbyPage() {
       clearInterval(timerRef.current);
       clearTimeout(staleTimer);
     };
-  }, [jwt, userId]); // eslint-disable-line
+  }, [userId]); // eslint-disable-line
 
   // ─── タイマー ─────────────────────────────────────────────
   useEffect(() => {
@@ -763,8 +761,8 @@ export default function OnlineLobbyPage() {
     sessionStorage.removeItem('shogi_online_game');
     setView('lobby'); setGame(null); setGameOver(null);
     setInWaitList(false); setQuickMatchKey(null);
-    fetch(`${API}/api/online/me`,      { headers:{ Authorization:`Bearer ${jwt}` } }).then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok){ setMyRating(d.rating); setMyGames(d.games); } }).catch(()=>{});
-    fetch(`${API}/api/online/history`, { headers:{ Authorization:`Bearer ${jwt}` } }).then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setHistory(d.games||[]); }).catch(()=>{});
+    fetch(`${API}/api/online/me`,      { credentials:'include' }).then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok){ setMyRating(d.rating); setMyGames(d.games); } }).catch(()=>{});
+    fetch(`${API}/api/online/history`, { credentials:'include' }).then(r=>r.ok?r.json():null).then(d=>{ if(d?.ok) setHistory(d.games||[]); }).catch(()=>{});
   };
 
   const handleSpectate = (gameId) => {
@@ -775,7 +773,7 @@ export default function OnlineLobbyPage() {
   const fetchFriends = async () => {
     setFriendsLoading(true);
     try {
-      const r = await fetch(`${API}/api/friends`, { headers: { Authorization: `Bearer ${jwt}` } });
+      const r = await fetch(`${API}/api/friends`, { credentials: 'include' });
       const d = await r.json();
       if (d.ok) { setFriends(d.friends || []); setPendingReceived(d.pendingReceived || []); setPendingSent(d.pendingSent || []); }
     } catch {} finally { setFriendsLoading(false); }
@@ -785,7 +783,7 @@ export default function OnlineLobbyPage() {
     if (!q.trim()) { setFriendResults([]); return; }
     setFriendSearching(true);
     try {
-      const r = await fetch(`${API}/api/friends/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${jwt}` } });
+      const r = await fetch(`${API}/api/friends/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
       const d = await r.json();
       if (d.ok) setFriendResults(d.users || []);
     } catch {} finally { setFriendSearching(false); }
@@ -793,7 +791,8 @@ export default function OnlineLobbyPage() {
 
   const sendFriendRequest = async (toId) => {
     const r = await fetch(`${API}/api/friends/request`, {
-      method: 'POST', headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ toId }),
     });
     const d = await r.json();
@@ -803,7 +802,8 @@ export default function OnlineLobbyPage() {
 
   const respondFriendRequest = async (fromId, action) => {
     const r = await fetch(`${API}/api/friends/respond`, {
-      method: 'POST', headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ fromId, action }),
     });
     const d = await r.json();
@@ -814,7 +814,7 @@ export default function OnlineLobbyPage() {
   const removeFriend = async (friendId, name) => {
     if (!window.confirm(`${name}さんを友達から削除しますか？`)) return;
     const r = await fetch(`${API}/api/friends/${friendId}`, {
-      method: 'DELETE', headers: { Authorization: `Bearer ${jwt}` },
+      method: 'DELETE', credentials: 'include',
     });
     const d = await r.json();
     if (d.ok) fetchFriends();
@@ -856,11 +856,13 @@ export default function OnlineLobbyPage() {
 
   // 友達タブを開いたときに最新状態を取得
   useEffect(() => {
-    if (lobbyTab === 'friends' && jwt) fetchFriends();
+    if (lobbyTab === 'friends' && userId) fetchFriends();
   }, [lobbyTab]); // eslint-disable-line
 
   const handleLogout = () => {
-    localStorage.removeItem('shogi_jwt');
+    fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    localStorage.removeItem('shogi_uid');
+    localStorage.removeItem('shogi_email');
     navigate('/login');
   };
 
@@ -1030,24 +1032,32 @@ export default function OnlineLobbyPage() {
                 const visC = flipped ? 8 - toC : toC;
                 const visR = flipped ? 8 - toR : toR;
                 const leftPct = (visC / 9 + 1/18) * 100;
-                const topPct  = (visR / 9) * 100;
                 const base = pendingMove.pieceBase;
+                // 上端(0-1行)はセル下に、下端(7-8行)はセル上に、それ以外はセル中央に表示
+                const nearTop    = visR <= 1;
+                const nearBottom = visR >= 7;
+                const topPct = nearTop    ? (visR + 1) / 9 * 100
+                             : nearBottom ? visR / 9 * 100
+                             :              (visR + 0.5) / 9 * 100;
+                const xform  = nearTop    ? 'translateX(-50%)'
+                             : nearBottom ? 'translateX(-50%) translateY(-100%)'
+                             :              'translateX(-50%) translateY(-50%)';
                 return (
                   <div
-                    className="absolute z-20 flex gap-2 -translate-x-1/2 -translate-y-1/2"
-                    style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                    className="absolute z-20 flex"
+                    style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: xform, gap: '1.5cqw' }}
                   >
                     <button onClick={() => { doMove({...pendingMove, promote:true}); setPendingMove(null); }}
-                      className="flex flex-col items-center justify-center rounded shadow-xl active:scale-95 transition-transform"
-                      style={{ width:52,height:52,background:'#FFF9C4',border:'2.5px solid #DC2626',boxShadow:'0 4px 12px rgba(0,0,0,0.6)' }}>
-                      <span className="font-black leading-none text-red-600" style={{fontSize:28}}>{PIECE_KANJI['+'+base]??'+'}</span>
-                      <span className="text-[9px] text-red-500 font-bold">成</span>
+                      className="flex flex-col items-center justify-center rounded-xl shadow-xl active:scale-95 transition-transform"
+                      style={{ width:'11cqw',height:'11cqw',background:'#FFF9C4',border:'0.35cqw solid #DC2626',boxShadow:'0 0.6cqw 2cqw rgba(0,0,0,0.7)' }}>
+                      <span className="font-black leading-none text-red-600" style={{fontSize:'6.5cqw'}}>{PIECE_KANJI['+'+base]??'+'}</span>
+                      <span className="font-bold text-red-500" style={{fontSize:'1.3cqw'}}>成</span>
                     </button>
                     <button onClick={() => { doMove({...pendingMove, promote:false}); setPendingMove(null); }}
-                      className="flex flex-col items-center justify-center rounded shadow-xl active:scale-95 transition-transform"
-                      style={{ width:52,height:52,background:'#FFF9C4',border:'2.5px solid #374151',boxShadow:'0 4px 12px rgba(0,0,0,0.6)' }}>
-                      <span className="font-black leading-none text-gray-900" style={{fontSize:28}}>{PIECE_KANJI[base]??base}</span>
-                      <span className="text-[9px] text-gray-500 font-bold">不成</span>
+                      className="flex flex-col items-center justify-center rounded-xl shadow-xl active:scale-95 transition-transform"
+                      style={{ width:'11cqw',height:'11cqw',background:'#FFF9C4',border:'0.35cqw solid #374151',boxShadow:'0 0.6cqw 2cqw rgba(0,0,0,0.7)' }}>
+                      <span className="font-black leading-none text-gray-900" style={{fontSize:'6.5cqw'}}>{PIECE_KANJI[base]??base}</span>
+                      <span className="font-bold text-gray-500" style={{fontSize:'1.3cqw'}}>不成</span>
                     </button>
                   </div>
                 );

@@ -992,45 +992,31 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handler);
   }, [openSaveMenu]);
 
-  // WebRTC モード時の認証トークン。非WebRTCモードは固定値で認証スキップ
+  // WebRTC モード時の認証ユーザーID。非WebRTCモードは固定値で認証スキップ
   const [authToken, setAuthToken] = useState(() => {
     if (import.meta.env.VITE_USE_WEBRTC !== 'true') return '__local__';
-    return localStorage.getItem('shogi_jwt') || '';
+    return ''; // /auth/me で取得
   });
+  const [authEmail, setAuthEmail] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // 起動時トークン検証: 期限切れなら削除、7日以内に期限切れなら自動リフレッシュ
+  // 起動時セッション確認: Cookie が有効なら userId・email を取得し、Cookie を更新
   useEffect(() => {
-    const token = localStorage.getItem('shogi_jwt');
-    if (!token || token === '__local__') return;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const now = Math.floor(Date.now() / 1000);
-      if (payload.exp && payload.exp < now) {
-        // 期限切れ → ログアウト
-        localStorage.removeItem('shogi_jwt');
-        setAuthToken('');
-        return;
-      }
-      // 残り7日以内に期限切れ → 自動リフレッシュ
-      // 注意: setAuthToken を呼ぶとソケット再接続が発生するため、
-      // localStorage のみ更新して次回の自然な再接続時に新トークンを使用させる
-      if (payload.exp && payload.exp - now < 7 * 24 * 3600) {
-        fetch(`${CLOUD_API}/auth/refresh`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            if (data?.token) {
-              localStorage.setItem('shogi_jwt', data.token);
-              // setAuthToken は呼ばない — ソケット再接続を防ぐ
-              // 現在のソケットは旧トークンで既に接続済みのため続行可能
-            }
-          })
-          .catch(() => {});
-      }
-    } catch { /* JWT解析失敗 = 不正トークン → 何もしない */ }
+    if (import.meta.env.VITE_USE_WEBRTC !== 'true') return;
+    fetch(`${CLOUD_API}/auth/me`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.ok) {
+          setAuthToken(data.userId);
+          setAuthEmail(data.email);
+          setIsAdmin(data.isAdmin === true);
+          localStorage.setItem('shogi_uid', data.userId);
+          localStorage.setItem('shogi_email', data.email || '');
+        }
+      })
+      .catch(() => {});
+    // セッション Cookie を自動延長
+    fetch(`${CLOUD_API}/auth/refresh`, { method: 'POST', credentials: 'include' }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1052,23 +1038,15 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // ログイン状態になったらサーバーからユーザー設定・管理者フラグを取得
+  // ログイン状態になったらサーバーからユーザー設定を取得
   useEffect(() => {
     if (!authToken || authToken === '__local__') {
       setIsAdmin(false);
       return;
     }
-    fetch(`${CLOUD_API}/api/settings`, {
-      headers: { Authorization: `Bearer ${authToken}` },
-    })
+    fetch(`${CLOUD_API}/api/settings`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.ok) setUserSettings(data.settings ?? {}); })
-      .catch(() => {});
-    fetch(`${CLOUD_API}/auth/me`, {
-      headers: { Authorization: `Bearer ${authToken}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { setIsAdmin(data?.isAdmin === true); })
       .catch(() => {});
   }, [authToken]);
 
@@ -1512,9 +1490,9 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       setWebrtcNetworkError(false);
     });
 
-    // JWT 期限切れ: ログイン画面に戻す
+    // セッション切れ: ログイン画面に戻す
     s.on('auth_error', () => {
-      localStorage.removeItem('shogi_jwt');
+      fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
       setAuthToken('');
     });
 
@@ -2119,17 +2097,15 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   }, []);
 
   // ── 棋譜解析 ──────────────────────────────────────────────
-  // JWT から email を取り出す
+  // authToken は userId そのもの (ログイン後に /auth/me から取得)
   const userEmail = useMemo(() => {
     if (!authToken || authToken === '__local__') return null;
-    try { return JSON.parse(atob(authToken.split('.')[1])).email || null; }
-    catch { return null; }
-  }, [authToken]);
+    return authEmail;
+  }, [authToken, authEmail]);
 
   const userId = useMemo(() => {
     if (!authToken || authToken === '__local__') return null;
-    try { return JSON.parse(atob(authToken.split('.')[1])).userId || null; }
-    catch { return null; }
+    return authToken;
   }, [authToken]);
 
   // エージェント必須チェック (WebRTC モードのみ) — ref 経由で stale closure を回避
@@ -2195,7 +2171,9 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
 
   // ログアウト
   function handleLogout() {
-    localStorage.removeItem('shogi_jwt');
+    fetch(`${CLOUD_API}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    localStorage.removeItem('shogi_uid');
+    localStorage.removeItem('shogi_email');
     window.location.replace('/login'); // フルリロードで COOP をリセット
   }
 
@@ -2203,12 +2181,13 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   const saveUserSettings = useCallback(async (patch) => {
     const res = await fetch(`${CLOUD_API}/api/settings`, {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(patch),
     });
     const data = await res.json();
     if (data?.ok) setUserSettings(data.settings ?? {});
-  }, [authToken]);
+  }, []);
 
   const handleStartAutoAnalysis = useCallback((condition, rangeFrom, rangeTo) => {
     if (!requireAgent()) return false;
@@ -2507,10 +2486,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     try {
       const res = await fetch(`${CLOUD_API}/api/share`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title, content }),
       });
       const data = await res.json();
@@ -2557,10 +2534,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
       const finalTitle = titleSnap || `${numMoves}手詰め`;
       const res = await fetch(`${CLOUD_API}/api/tsume`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title: finalTitle, puzzle, visibility: visibilitySnap, description: descriptionSnap }),
       });
       if (res.status === 401) throw new Error('詰将棋を投稿するにはログインが必要です');
@@ -2646,13 +2621,10 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   // ── クラウド: 一覧取得 ──
   const loadCloudKifs = useCallback(async () => {
     const guestId = getGuestId();
+    const headers = {};
+    if (authToken === '__local__') { headers['Authorization'] = 'Bearer __local__'; headers['X-Guest-Id'] = guestId; }
     try {
-      const res = await fetch(`${CLOUD_API}/api/kif`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          ...(authToken === '__local__' ? { 'X-Guest-Id': guestId } : {}),
-        },
-      });
+      const res = await fetch(`${CLOUD_API}/api/kif`, { headers, credentials: 'include' });
       const data = await res.json();
       setCloudKifs(data.ok ? data.kifs : []);
     } catch { setCloudKifs([]); }
@@ -2669,13 +2641,12 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
     setCloudSaving(true);
     try {
       const guestId = getGuestId();
+      const headers = { 'Content-Type': 'application/json' };
+      if (authToken === '__local__') { headers['Authorization'] = 'Bearer __local__'; headers['X-Guest-Id'] = guestId; }
       const res = await fetch(`${CLOUD_API}/api/kif`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-          ...(authToken === '__local__' ? { 'X-Guest-Id': guestId } : {}),
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ title, content }),
       });
       const data = await res.json();
@@ -2689,13 +2660,10 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   // ── クラウド: 読み込み ──
   const handleCloudLoad = useCallback(async (id) => {
     const guestId = getGuestId();
+    const headers = {};
+    if (authToken === '__local__') { headers['Authorization'] = 'Bearer __local__'; headers['X-Guest-Id'] = guestId; }
     try {
-      const res = await fetch(`${CLOUD_API}/api/kif/${id}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          ...(authToken === '__local__' ? { 'X-Guest-Id': guestId } : {}),
-        },
-      });
+      const res = await fetch(`${CLOUD_API}/api/kif/${id}`, { headers, credentials: 'include' });
       const data = await res.json();
       if (data.ok) { loadKifText(data.kif.content); setShowCloudPanel(false); }
       else throw new Error(data.error);
@@ -2706,14 +2674,10 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
   const handleCloudDelete = useCallback(async (id) => {
     if (!confirm('この棋譜をクラウドから削除しますか？')) return;
     const guestId = getGuestId();
+    const headers = {};
+    if (authToken === '__local__') { headers['Authorization'] = 'Bearer __local__'; headers['X-Guest-Id'] = guestId; }
     try {
-      await fetch(`${CLOUD_API}/api/kif/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          ...(authToken === '__local__' ? { 'X-Guest-Id': guestId } : {}),
-        },
-      });
+      await fetch(`${CLOUD_API}/api/kif/${id}`, { method: 'DELETE', headers, credentials: 'include' });
       setCloudKifs(prev => prev?.filter(k => k.id !== id) ?? prev);
     } catch (e) { alert(`削除エラー: ${e.message}`); }
   }, [authToken]);
@@ -3278,7 +3242,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                         try {
                           await fetch(`${CLOUD_API}/api/share/${s.token}`, {
                             method: 'DELETE',
-                            headers: { Authorization: `Bearer ${authToken}` },
+                            credentials: 'include',
                           });
                           setShareList(prev => prev.filter(x => x.token !== s.token));
                         } catch { /* ignore */ }
@@ -3413,7 +3377,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                     setShareListLoading(true);
                     try {
                       const res = await fetch(`${CLOUD_API}/api/shares`, {
-                        headers: { Authorization: `Bearer ${authToken}` },
+                        credentials: 'include',
                       });
                       const data = await res.json();
                       setShareList(data.ok ? data.shares : []);
@@ -3801,6 +3765,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                     onEditRightClick={editMode ? handleEditRightClick : undefined}
                     editMode={editMode}
                     flipped={flipped}
+                    promoteOverlay={!editMode && state.promoteDialog ? { to: state.promoteDialog.to, base: state.promoteDialog.piece.type, player: state.promoteDialog.piece.player } : null}
+                    onPromoteChoice={!editMode ? (p) => dispatch({ type: 'RESOLVE_PROMOTE', promote: p, inGame: gameMode === 'playing' }) : null}
                   />
                   {!editMode && aiOverlay}
                 </div>
@@ -4383,6 +4349,8 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
                           editMode={editMode}
                           flipped={flipped}
                           sideLayout
+                          promoteOverlay={!editMode && state.promoteDialog ? { to: state.promoteDialog.to, base: state.promoteDialog.piece.type, player: state.promoteDialog.piece.player } : null}
+                          onPromoteChoice={!editMode ? (p) => dispatch({ type: 'RESOLVE_PROMOTE', promote: p, inGame: gameMode === 'playing' }) : null}
                         />
                         {!editMode && aiOverlay}
                       </div>
@@ -4509,28 +4477,6 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
         />
       )}
 
-      {/* 成りダイアログ（グローバル） */}
-      {state.promoteDialog && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-4
-            shadow-2xl border border-gray-600 w-64">
-            <p className="text-white font-bold text-lg">成りますか？</p>
-            <div className="text-amber-300 text-4xl font-bold leading-none">
-              {getPieceChar(state.promoteDialog.piece.type, state.promoteDialog.piece.player)}
-            </div>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => dispatch({ type: 'RESOLVE_PROMOTE', promote: true, inGame: gameMode === 'playing' })}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold transition-colors"
-              >成る</button>
-              <button
-                onClick={() => dispatch({ type: 'RESOLVE_PROMOTE', promote: false, inGame: gameMode === 'playing' })}
-                className="flex-1 py-3 bg-gray-600 hover:bg-gray-500 rounded-xl text-white font-bold transition-colors"
-              >成らない</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* PV読み筋ボード */}
       {pvCandidate && pvStates && (
@@ -4608,7 +4554,7 @@ if (tsumeCallbackRef.current && data.isMate && data.mateIn != null && data.mateI
 
       {/* お問い合わせダイアログ */}
       {showContactDialog && (
-        <ContactDialog apiBase={CLOUD_API} authToken={authToken} onClose={() => setShowContactDialog(false)} />
+        <ContactDialog apiBase={CLOUD_API} onClose={() => setShowContactDialog(false)} />
       )}
 
       {/* 棋譜情報ダイアログ */}

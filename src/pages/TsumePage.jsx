@@ -247,14 +247,11 @@ export default function TsumePage() {
   const navigate  = useNavigate();
 
   const authInfo = useMemo(() => {
-    const tok = localStorage.getItem('shogi_jwt');
-    if (!tok) return null;
-    try {
-      const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      return { email: p.email, userId: p.userId, token: tok };
-    } catch { return null; }
+    const userId = localStorage.getItem('shogi_uid');
+    const email  = localStorage.getItem('shogi_email');
+    return userId ? { userId, email } : null;
   }, []);
-  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(authInfo?.token ?? null);
+  const { dialog: settingsDialog, onShowSettings } = useAccountSettings(null);
 
   // ── ロード状態 ─────────────────────────────────────────────
   const [loadStatus,  setLoadStatus]  = useState('loading');
@@ -276,10 +273,7 @@ export default function TsumePage() {
   const [recents, setRecents] = useState([]);
 
   // ログイン中ユーザー
-  const myToken  = localStorage.getItem('shogi_jwt');
-  const myUserId = (() => {
-    try { return myToken ? JSON.parse(atob(myToken.split('.')[1])).userId : null; } catch { return null; }
-  })();
+  const myUserId = localStorage.getItem('shogi_uid') || null;
 
   // ── ゲーム状態 ─────────────────────────────────────────────
   const [board,            setBoard]            = useState(null);
@@ -314,8 +308,7 @@ export default function TsumePage() {
     setAutoPlay(false);
     puzzleRef.current = null;
 
-    const headers = myToken ? { Authorization: `Bearer ${myToken}` } : {};
-    fetch(`${CLOUD_API}/api/tsume/${token}`, { headers })
+    fetch(`${CLOUD_API}/api/tsume/${token}`, { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         if (!data.ok) throw new Error(data.error || '読み込みエラー');
@@ -364,11 +357,11 @@ export default function TsumePage() {
 
   // ── いいね ─────────────────────────────────────────────────
   async function handleLike() {
-    if (!myToken || likeBusy) return;
+    if (!myUserId || likeBusy) return;
     setLikeBusy(true);
     try {
       const res  = await fetch(`${CLOUD_API}/api/tsume/${token}/like`, {
-        method: 'POST', headers: { Authorization: `Bearer ${myToken}` },
+        method: 'POST', credentials: 'include',
       });
       const data = await res.json();
       if (data.ok) { setMyLike(data.liked); setLikes(data.count); }
@@ -377,11 +370,11 @@ export default function TsumePage() {
 
   // ── ブックマーク ────────────────────────────────────────────
   async function handleBookmark() {
-    if (!myToken || bookmarkBusy) return;
+    if (!myUserId || bookmarkBusy) return;
     setBookmarkBusy(true);
     try {
       const res  = await fetch(`${CLOUD_API}/api/tsume/${token}/bookmark`, {
-        method: 'POST', headers: { Authorization: `Bearer ${myToken}` },
+        method: 'POST', credentials: 'include',
       });
       const data = await res.json();
       if (data.ok) { setMyBookmark(data.bookmarked); setBookmarks(data.count); }
@@ -393,8 +386,7 @@ export default function TsumePage() {
     if (!window.confirm('この詰将棋を削除しますか？この操作は取り消せません。')) return;
     try {
       const res = await fetch(`${CLOUD_API}/api/tsume/${token}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${myToken}` },
+        method: 'DELETE', credentials: 'include',
       });
       const data = await res.json();
       if (data.ok) navigate(-1);
@@ -508,7 +500,7 @@ export default function TsumePage() {
                       || mp.type === 'N' && (attacker === 1 ? r <= 1 : r >= 7);
             const inZone = attacker === 1 ? (r <= 2 || selected.row <= 2) : (r >= 6 || selected.row >= 6);
             if (must) { executeAttackerMove({ ...move, promote: true }); return; }
-            if (inZone) { setShowPromo(move); return; }
+            if (inZone) { setShowPromo({ ...move, base: mp.type, player: attacker }); return; }
           }
         }
         executeAttackerMove(move);
@@ -665,7 +657,7 @@ export default function TsumePage() {
             <AccountMenu
               email={authInfo.email}
               userId={authInfo.userId}
-              onLogout={() => { localStorage.removeItem('shogi_jwt'); navigate('/login'); }}
+              onLogout={() => { fetch(`${CLOUD_API}/auth/logout`,{method:'POST',credentials:'include'}).catch(()=>{}); localStorage.removeItem('shogi_uid'); localStorage.removeItem('shogi_email'); navigate('/login'); }}
               onShowSettings={onShowSettings}
             />
           ) : (
@@ -784,6 +776,8 @@ export default function TsumePage() {
                       onCellClick={showAnswer ? undefined : handleCellClick}
                       activePlayer={currentPlayer}
                       flipped={flipped}
+                      promoteOverlay={showPromo}
+                      onPromoteChoice={handlePromotionChoice}
                     />
                   </div>
 
@@ -896,8 +890,8 @@ export default function TsumePage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleLike}
-                  disabled={!myToken || likeBusy}
-                  title={myToken ? (myLike ? 'いいねを取り消す' : 'いいね') : 'ログインが必要です'}
+                  disabled={!myUserId || likeBusy}
+                  title={myUserId ? (myLike ? 'いいねを取り消す' : 'いいね') : 'ログインが必要です'}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all
                     ${myLike
                       ? 'border-red-500/50 bg-red-500/15 text-red-400 hover:bg-red-500/25'
@@ -909,8 +903,8 @@ export default function TsumePage() {
                 </button>
                 <button
                   onClick={handleBookmark}
-                  disabled={!myToken || bookmarkBusy}
-                  title={myToken ? (myBookmark ? 'ブックマーク解除' : 'ブックマーク') : 'ログインが必要です'}
+                  disabled={!myUserId || bookmarkBusy}
+                  title={myUserId ? (myBookmark ? 'ブックマーク解除' : 'ブックマーク') : 'ログインが必要です'}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all
                     ${myBookmark
                       ? 'border-blue-500/50 bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
@@ -981,26 +975,6 @@ export default function TsumePage() {
         </div>
       )}
 
-      {/* ── 成り確認ダイアログ ── */}
-      {showPromo && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-          onClick={() => handlePromotionChoice(false)}>
-          <div className="bg-gray-800 border border-gray-600 rounded-2xl p-5 flex flex-col gap-3 shadow-2xl"
-            onClick={e => e.stopPropagation()}>
-            <p className="text-white text-center font-bold">成りますか？</p>
-            <div className="flex gap-3">
-              <button onClick={() => handlePromotionChoice(true)}
-                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors">
-                成る
-              </button>
-              <button onClick={() => handlePromotionChoice(false)}
-                className="px-6 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition-colors">
-                成らない
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

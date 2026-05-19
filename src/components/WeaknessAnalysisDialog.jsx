@@ -196,15 +196,16 @@ export default function WeaknessAnalysisDialog({ onClose, authToken, apiBase }) 
   const [error,        setError]        = useState('');
   const [gameResults,  setGameResults]  = useState([]);
 
-  const hdrs = () => ({
-    Authorization: `Bearer ${authToken}`,
-    ...(authToken === '__local__' ? { 'X-Guest-Id': localStorage.getItem('guestId') || '' } : {}),
-  });
+  const kifHeaders = () => {
+    const h = {};
+    if (authToken === '__local__') { h['Authorization'] = 'Bearer __local__'; h['X-Guest-Id'] = localStorage.getItem('guestId') || ''; }
+    return h;
+  };
 
   const fetchList = useCallback(async () => {
     setLoadingList(true); setError('');
     try {
-      const res = await fetch(`${apiBase}/api/kif`, { headers: hdrs() });
+      const res = await fetch(`${apiBase}/api/kif`, { headers: kifHeaders(), credentials: 'include' });
       const data = await res.json();
       setKifList(data.ok ? data.kifs : []);
     } catch { setError('棋譜一覧の取得に失敗しました'); setKifList([]); }
@@ -237,7 +238,7 @@ export default function WeaknessAnalysisDialog({ onClose, authToken, apiBase }) 
     const allCpls = [], perGame = [];
     for (const id of selected) {
       try {
-        const res = await fetch(`${apiBase}/api/kif/${id}`, { headers: hdrs() });
+        const res = await fetch(`${apiBase}/api/kif/${id}`, { headers: kifHeaders(), credentials: 'include' });
         const data = await res.json();
         if (!data.ok) continue;
         const side = sideMap[id] ?? 1;

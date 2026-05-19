@@ -18,7 +18,7 @@ function PVCell({ piece, isFrom, isTo }) {
         <span
           className="font-bold leading-none pointer-events-none w-full text-center"
           style={{
-            fontSize: 'min(7.5cqw, 34px)',
+            fontSize: '7.5cqw',
             color: '#1a1a1a',
             transform: piece.player === 2 ? 'rotate(180deg)' : 'none',
             display: 'block',

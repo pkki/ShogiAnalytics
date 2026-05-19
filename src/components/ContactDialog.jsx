@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
-export default function ContactDialog({ onClose, apiBase = '', authToken = '' }) {
+export default function ContactDialog({ onClose, apiBase = '' }) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,10 +66,8 @@ export default function ContactDialog({ onClose, apiBase = '', authToken = '' })
     try {
       const res = await fetch(`${apiBase}/api/contact`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ subject: subject.trim(), body: body.trim(), turnstileToken }),
       });
       const data = await res.json();

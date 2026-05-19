@@ -65,9 +65,7 @@ function Cell({ piece, cellState, onClick, onContextMenu, editMode, flipped, sid
         <span
           className="font-bold leading-none pointer-events-none"
           style={{
-            fontSize: sideLayout
-              ? 'min(8cqw, 26px)'
-              : 'min(8cqw, 34px)',
+            fontSize: '8cqw',
             color: promoted ? '#DC2626' : '#1a1a1a',
             transform: shouldRotate ? 'rotate(180deg)' : 'none',
             display: 'block',
@@ -222,7 +220,7 @@ function CandidateArrows({ candidateArrows, flipped, activePlayer, hands }) {
 // ─────────────────────────────────────────────
 // BoardCore: 盤面グリッド＋ラベル
 // ─────────────────────────────────────────────
-export function BoardCore({ board, hands, selectedCell, highlightSet, lastMove, candidateArrows, activePlayer, onCellClick, onEditRightClick, editMode, flipped, sideLayout }) {
+export function BoardCore({ board, hands, selectedCell, highlightSet, lastMove, candidateArrows, activePlayer, onCellClick, onEditRightClick, editMode, flipped, sideLayout, promoteOverlay, onPromoteChoice }) {
   const hlSet  = highlightSet || new Set();
   const FILES  = flipped ? FILES_FLIPPED : FILES_NORMAL;
   const RANKS  = flipped ? RANKS_FLIPPED : RANKS_NORMAL;
@@ -276,6 +274,45 @@ export function BoardCore({ board, hands, selectedCell, highlightSet, lastMove, 
             {cells}
           </div>
           <CandidateArrows candidateArrows={candidateArrows} flipped={flipped} activePlayer={activePlayer} hands={hands} />
+          {promoteOverlay && onPromoteChoice && (() => {
+            const [toR, toC] = promoteOverlay.to;
+            const visC = flipped ? 8 - toC : toC;
+            const visR = flipped ? 8 - toR : toR;
+            const leftPct = (visC / 9 + 1 / 18) * 100;
+            const nearTop    = visR <= 1;
+            const nearBottom = visR >= 7;
+            const topPct = nearTop    ? (visR + 1) / 9 * 100
+                         : nearBottom ? visR / 9 * 100
+                         :              (visR + 0.5) / 9 * 100;
+            const xform  = nearTop    ? 'translateX(-50%)'
+                         : nearBottom ? 'translateX(-50%) translateY(-100%)'
+                         :              'translateX(-50%) translateY(-50%)';
+            const base   = promoteOverlay.base;
+            const player = promoteOverlay.player ?? 1;
+            return (
+              <div className="absolute z-20 flex"
+                   style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: xform, gap: '1.5cqw' }}>
+                <button
+                  onClick={() => onPromoteChoice(true)}
+                  className="flex flex-col items-center justify-center rounded-xl shadow-xl active:scale-95 transition-transform"
+                  style={{ width:'11cqw', height:'11cqw', background:'#FFF9C4', border:'0.35cqw solid #DC2626', boxShadow:'0 0.6cqw 2cqw rgba(0,0,0,0.7)' }}>
+                  <span className="font-black leading-none text-red-600" style={{fontSize:'6.5cqw'}}>
+                    {getPieceChar('+'+base, player)}
+                  </span>
+                  <span className="font-bold text-red-500" style={{fontSize:'1.3cqw'}}>成</span>
+                </button>
+                <button
+                  onClick={() => onPromoteChoice(false)}
+                  className="flex flex-col items-center justify-center rounded-xl shadow-xl active:scale-95 transition-transform"
+                  style={{ width:'11cqw', height:'11cqw', background:'#FFF9C4', border:'0.35cqw solid #374151', boxShadow:'0 0.6cqw 2cqw rgba(0,0,0,0.7)' }}>
+                  <span className="font-black leading-none text-gray-900" style={{fontSize:'6.5cqw'}}>
+                    {getPieceChar(base, player)}
+                  </span>
+                  <span className="font-bold text-gray-500" style={{fontSize:'1.3cqw'}}>不成</span>
+                </button>
+              </div>
+            );
+          })()}
         </div>
         <div className="flex flex-col flex-shrink-0" style={{ width: 18 }}>
           {RANKS.map(r => (
@@ -484,6 +521,7 @@ export default function ShogiBoard({
   selectedCell, highlightSet, lastMove, candidateArrows,
   onCellClick, onDropSelect, dropSelected, flipped, inCheck,
   editMode, onEditRightClick, onEditHandSelect, onEditHandRightClick, onHandAreaClick,
+  promoteOverlay, onPromoteChoice,
 }) {
   return (
     <div className="flex flex-col gap-2 px-2 select-none">
@@ -512,6 +550,7 @@ export default function ShogiBoard({
         highlightSet={highlightSet} lastMove={lastMove} candidateArrows={candidateArrows}
         onCellClick={onCellClick} flipped={flipped}
         editMode={editMode} onEditRightClick={onEditRightClick}
+        promoteOverlay={promoteOverlay} onPromoteChoice={onPromoteChoice}
       />
 
       {/* 先手エリア（下）*/}

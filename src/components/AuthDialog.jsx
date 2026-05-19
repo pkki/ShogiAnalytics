@@ -9,9 +9,10 @@ const API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:8080';
 
 async function apiPost(path, body) {
   const res = await fetch(`${API}${path}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
+    method:      'POST',
+    headers:     { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body:        JSON.stringify(body),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || 'サーバーエラーが発生しました');
@@ -88,8 +89,8 @@ export default function AuthDialog({ onSuccess }) {
     setError(''); setLoading(true);
     try {
       const res = await apiPost('/auth/login', { email, password });
-      localStorage.setItem('shogi_jwt', res.token);
-      onSuccess(res.token);
+      if (res.userId) { localStorage.setItem('shogi_uid', res.userId); localStorage.setItem('shogi_email', res.email || ''); }
+      onSuccess();
     } catch (err) {
       if (err.message.includes('認証が完了していません')) {
         setPendingEmail(email);

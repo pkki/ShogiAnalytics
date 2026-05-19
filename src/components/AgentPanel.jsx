@@ -15,12 +15,12 @@ const API = import.meta.env.VITE_SIGNALING_URL || 'http://localhost:3010';
 const AGENT_DOWNLOAD_WIN = import.meta.env.VITE_AGENT_DOWNLOAD_WIN || `${API}/downloads/ShogiAgent-windows.exe`;
 const AGENT_DOWNLOAD_MAC = import.meta.env.VITE_AGENT_DOWNLOAD_MAC || `${API}/downloads/ShogiAgent-mac.zip`;
 
-async function apiFetch(path, opts = {}, token) {
+async function apiFetch(path, opts = {}) {
   const res = await fetch(`${API}${path}`, {
     ...opts,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(opts.headers || {}),
     },
   });
@@ -67,18 +67,17 @@ export default function AgentPanel({ connectedAgents, selectedAgentId, authToken
   }, [open]);
 
   const fetchRegistered = useCallback(async () => {
-    if (!authToken) return;
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch('/api/agents', {}, authToken);
+      const data = await apiFetch('/api/agents');
       setReg(data.agents || []);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [authToken]);
+  }, []);
 
   useEffect(() => {
     if (open) fetchRegistered();
@@ -87,7 +86,7 @@ export default function AgentPanel({ connectedAgents, selectedAgentId, authToken
   async function revokeAgent(id) {
     if (!confirm(t('agent.confirmDelete'))) return;
     try {
-      await apiFetch(`/api/agents/${id}`, { method: 'DELETE' }, authToken);
+      await apiFetch(`/api/agents/${id}`, { method: 'DELETE' });
       setReg((prev) => prev.filter((a) => a.id !== id));
     } catch (e) {
       alert(e.message);
